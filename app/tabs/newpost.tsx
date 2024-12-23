@@ -15,6 +15,7 @@ import {
   Modal,
   PermissionsAndroid,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
@@ -170,6 +171,12 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
     try {
       console.log('Starting image upload process...');
       
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No authenticated session');
+      }
+
       // 1. Read the file as base64
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
@@ -187,9 +194,9 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
       }
       const byteArray = new Uint8Array(byteNumbers);
 
-      // 3. Generate a unique filename
+      // 3. Generate a unique filename with user ID
       const timestamp = new Date().getTime();
-      const filename = `professional-${timestamp}.jpg`;
+      const filename = `${session.user.id}/${timestamp}.jpg`;
       console.log("Uploading to filename:", filename);
 
       // 4. Upload to Supabase
@@ -223,14 +230,22 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   // Then modify the handleSubmit function
   const handleSubmit = async () => {
     try {
-      // First upload the image if one is selected
+      setLoading(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        Alert.alert('Error', 'You must be logged in to create a post');
+        return;
+      }
+
+      // Upload image first if one is selected
       let imageUrl = null;
       if (selectedImage) {
         imageUrl = await uploadImageToSupabase(selectedImage);
       }
 
       const { data, error } = await supabase
-        .from("professionals")
+        .from('professionals')
         .insert([
           {
             name,
@@ -248,21 +263,13 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
             expected_salary: expectedSalary,
             accommodation_pref: accommodation,
             location,
-            image: imageUrl,
-            created_at: new Date().toISOString(),
-          },
-        ])
-        .select();
+            user_id: session.user.id,
+            image: imageUrl // Add the image URL to the professional's data
+          }
+        ]);
 
-      if (error) {
-        console.error("Error inserting data:", error);
-        Alert.alert(
-          "Error",
-          "Failed to submit your service posting. Please try again."
-        );
-        return;
-      }
-
+      if (error) throw error;
+      
       console.log("Successfully added professional:", data);
       Alert.alert("Success", "Your service has been posted successfully!");
 
@@ -284,36 +291,16 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
       setLocation("");
       setSelectedImage(null);
     } catch (error) {
-      console.error("Error:", error);
-      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+      console.error('Error:', error);
+      Alert.alert('Error', 'An error occurred while creating the post');
+    } finally {
+      setLoading(false);
     }
-
-    /* COMMENTED OUT: Job offer posting logic for future use
-    else {
-      // Handle job offer posting (you can implement this later)
-      console.log("Job Offer Post Data:", {
-        type: "Job Offer",
-        name,
-        position,
-        description,
-        languages,
-        skills,
-        phoneNumber,
-        age,
-        educationLevel,
-        workExperience,
-        jobType,
-        startDate,
-        employmentStatus,
-        expectedSalary,
-        accommodation,
-      });
-    }
-    */
   };
 
   // Add these state variables
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Add this function to handle image selection
   const handleImagePick = async () => {
@@ -812,8 +799,16 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
         </View>
 
         {/* Submit Button */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Post Service</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, loading && styles.disabledButton]} 
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Post Service</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -1059,6 +1054,9 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 16,
     color: "#333",
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
 });
 

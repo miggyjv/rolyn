@@ -100,6 +100,35 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: "Dashboard",
+          tabBarIcon: ({ color }) => (
+            <FontAwesome size={28} name="dashboard" color={color} />
+          ),
+          headerShown: true,
+          headerTitle: () => (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text
+                style={{
+                  color: "black",
+                  fontSize: 23,
+                  fontWeight: "bold",
+                  paddingRight: 5,
+                }}
+              >
+                Rolyn
+              </Text>
+              <MaterialCommunityIcons
+                name="human-greeting-variant"
+                size={40}
+                color="purple"
+              />
+            </View>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
