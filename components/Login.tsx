@@ -17,15 +17,19 @@ AppState.addEventListener("change", (state) => {
 });
 
 export default function Login() {
+  console.log("Login component mounted");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [role, setRole] = useState<'worker' | 'employer'>('worker');
 
   async function signInWithEmail() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
+      email,
+      password,
     });
 
     if (error) Alert.alert(error.message);
@@ -34,18 +38,59 @@ export default function Login() {
 
   async function signUpWithEmail() {
     setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
+    try {
+      console.log("Starting signup process with role:", role);
 
-    if (error) Alert.alert(error.message);
-    if (!session)
-      Alert.alert("Please check your inbox for email verification!");
-    setLoading(false);
+      // 1. Sign up the user with additional metadata
+      const { error: authError, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: role, // Include role in user metadata
+          },
+        },
+      });
+
+      console.log("Auth response:", { error: authError, user: data.user });
+
+      if (authError) {
+        console.error("Auth Error:", authError);
+        Alert.alert("Authentication Error", authError.message);
+        return;
+      }
+
+      if (!data.user?.id) {
+        console.error("No user ID received");
+        Alert.alert("Error", "Failed to create user account");
+        return;
+      }
+
+      // 2. Update the profile role
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ role: role })
+        .eq('id', data.user.id);
+
+      if (updateError) {
+        console.error("Role Update Error:", updateError);
+        Alert.alert(
+          "Account Created", 
+          "Your account was created, but we couldn't set your role. Please try logging in and updating your role later."
+        );
+      } else {
+        Alert.alert(
+          "Success", 
+          "Account created successfully! Please check your email for verification."
+        );
+      }
+
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      Alert.alert("Error", "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -96,29 +141,44 @@ export default function Login() {
           labelStyle={styles.inputLabel}
         />
       </View>
+
+      {isRegistering && (
+        <View style={styles.roleContainer}>
+          <Text style={styles.roleLabel}>Select Role:</Text>
+          <View style={styles.roleButtons}>
+            <Button
+              title="Worker"
+              type={role === 'worker' ? 'solid' : 'outline'}
+              onPress={() => setRole('worker')}
+              containerStyle={styles.roleButton}
+            />
+            <Button
+              title="Employer"
+              type={role === 'employer' ? 'solid' : 'outline'}
+              onPress={() => setRole('employer')}
+              containerStyle={styles.roleButton}
+            />
+          </View>
+        </View>
+      )}
+
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Button
-          title="Sign in"
+          title={isRegistering ? "Sign Up" : "Sign In"}
           disabled={loading}
-          onPress={() => signInWithEmail()}
+          onPress={() => isRegistering ? signUpWithEmail() : signInWithEmail()}
           buttonStyle={styles.signInButton}
           titleStyle={styles.buttonTitle}
           disabledStyle={styles.disabledButton}
           loading={loading}
         />
       </View>
-      <View style={styles.verticallySpaced}>
-        <Button
-          title="Sign up"
-          disabled={loading}
-          onPress={() => signUpWithEmail()}
-          buttonStyle={styles.signUpButton}
-          titleStyle={styles.buttonTitle}
-          type="outline"
-          disabledStyle={styles.disabledButton}
-          loading={loading}
-        />
-      </View>
+
+      <Button
+        title={isRegistering ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
+        type="clear"
+        onPress={() => setIsRegistering(!isRegistering)}
+      />
     </View>
   );
 }
@@ -181,6 +241,20 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#A0AEC0',
     opacity: 0.6,
+  },
+  roleContainer: {
+    marginVertical: 10,
+  },
+  roleLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  roleButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  roleButton: {
+    width: '45%',
   },
 });
 
