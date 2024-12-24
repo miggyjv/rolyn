@@ -11,9 +11,8 @@ import {
 } from "react-native";
 
 const width = Dimensions.get("window").width;
-const height = Dimensions.get("window").height;
 
-interface CardItem {
+interface WorkerProfile {
   id: number;
   image: string;
   name: string;
@@ -33,48 +32,162 @@ interface CardItem {
   location: string;
 }
 
-interface RecCardsProps {
-  cardData: CardItem[];
-  title: string;
-  vertical?: boolean;
+interface JobPost {
+  id: string;
+  employer_id: string;
+  position: string;
+  job_type: 'Live-in' | 'Live-out' | 'Part-time';
+  required_languages: string[];
+  required_skills?: string[];
+  location: string;
+  salary_range: string;
+  accommodation_provided: boolean;
+  accommodation_type?: string;
+  start_date?: string;
+  description?: string;
+  household_size?: number;
+  has_children: boolean;
+  has_elderly: boolean;
+  has_pets: boolean;
 }
 
-export default function RecCards({ cardData, title, vertical = false }: RecCardsProps) {
+interface RecCardsProps {
+  cardData: (WorkerProfile | JobPost)[];
+  title: string;
+  vertical?: boolean;
+  cardType: 'worker' | 'job';
+}
+
+export default function RecCards({ cardData, title, vertical = false, cardType }: RecCardsProps) {
   const router = useRouter();
 
-  const formatArray = (arrayString: string) => {
+  const isJobPost = (item: WorkerProfile | JobPost): item is JobPost => {
+    return 'employer_id' in item;
+  };
+
+  const formatArray = (arrayString: string | string[]) => {
+    if (Array.isArray(arrayString)) return arrayString.join(", ");
     try {
       const array = JSON.parse(arrayString);
       return Array.isArray(array) ? array.join(", ") : arrayString;
-    } catch (error) {
-      console.log("Error parsing array:", error);
+    } catch {
       return arrayString;
     }
   };
 
-  const handleCardPress = (item: CardItem) => {
-    router.push({
-      pathname: "/job-details",
-      params: {
-        id: item.id,
-        name: item.name,
-        image: item.image,
-        positionNeeded: item.position,
-        languages: formatArray(item.languages),
-        skills: formatArray(item.skills),
-        startDate: typeof item.start_date === 'string' ? item.start_date : item.start_date.toISOString(),
-        workExperience: item.work_experience,
-        personalDescription: item.personal_description,
-        phoneNumber: item.phone_number,
-        age: item.age,
-        educationLevel: item.education_level,
-        jobType: item.job_type,
-        currStatus: item.curr_status,
-        expectedSalary: item.expected_salary,
-        accommodationPref: item.accommodation_pref,
-        location: item.location,
-      },
-    });
+  const renderJobCard = (job: JobPost) => {
+    const handlePress = () => {
+      router.push({
+        pathname: "/job-details",
+        params: {
+          id: job.id,
+          position: job.position,
+          jobType: job.job_type,
+          languages: formatArray(job.required_languages),
+          skills: job.required_skills ? formatArray(job.required_skills) : '',
+          location: job.location,
+          salaryRange: job.salary_range,
+          accommodation: `${job.accommodation_provided ? 'Provided' : 'Not provided'}${job.accommodation_type ? ` (${job.accommodation_type})` : ''}`,
+          startDate: job.start_date || 'Flexible',
+          description: job.description || '',
+          householdDetails: `${job.household_size || ''} person(s)${job.has_children ? ', with children' : ''}${job.has_elderly ? ', with elderly' : ''}${job.has_pets ? ', with pets' : ''}`,
+        },
+      });
+    };
+
+    return (
+      <TouchableOpacity
+        key={job.id}
+        style={[styles.card, vertical && styles.verticalCard]}
+        onPress={handlePress}
+      >
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{job.position}</Text>
+          <Text style={styles.cardPosition}>{job.job_type}</Text>
+          <Text style={styles.cardLocation}>
+            <Text>📍 </Text>
+            <Text>{job.location}</Text>
+          </Text>
+          <Text style={styles.cardSkills}>
+            🗣️ Languages: {formatArray(job.required_languages)}
+          </Text>
+          {job.required_skills && (
+            <Text style={styles.cardSkills}>
+              ⭐ Skills: {formatArray(job.required_skills)}
+            </Text>
+          )}
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardSalary}>
+              💰 Salary: {job.salary_range}
+            </Text>
+            <Text style={styles.cardAccommodation}>
+              🏠 {job.accommodation_provided ? 'Accommodation provided' : 'No accommodation'}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderWorkerCard = (worker: WorkerProfile) => {
+    const handlePress = () => {
+      router.push({
+        pathname: "/job-details",
+        params: {
+          id: worker.id,
+          name: worker.name,
+          image: worker.image,
+          positionNeeded: worker.position,
+          languages: formatArray(worker.languages),
+          skills: formatArray(worker.skills),
+          startDate: typeof worker.start_date === 'string' ? worker.start_date : worker.start_date.toISOString(),
+          workExperience: worker.work_experience,
+          personalDescription: worker.personal_description,
+          phoneNumber: worker.phone_number,
+          age: worker.age,
+          educationLevel: worker.education_level,
+          jobType: worker.job_type,
+          currStatus: worker.curr_status,
+          expectedSalary: worker.expected_salary,
+          accommodationPref: worker.accommodation_pref,
+          location: worker.location,
+        },
+      });
+    };
+
+    return (
+      <TouchableOpacity
+        key={worker.id}
+        style={[styles.card, vertical && styles.verticalCard]}
+        onPress={handlePress}
+      >
+        <Image source={{ uri: worker.image }} style={styles.cardImage} />
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle}>{worker.name}</Text>
+          <Text style={styles.cardPosition}>{worker.position}</Text>
+          <Text style={styles.cardLocation}>
+            <Text>📍 </Text>
+            <Text>{worker.location}</Text>
+          </Text>
+          <Text style={styles.cardSkills}>
+            🗣️ Languages: {formatArray(worker.languages)}
+          </Text>
+          <Text style={styles.cardSkills}>
+            ⭐ Skills: {formatArray(worker.skills)}
+          </Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardStartDate}>
+              🗓️ Available from: {typeof worker.start_date === 'string' 
+                ? new Date(worker.start_date).toLocaleDateString() 
+                : worker.start_date.toLocaleDateString()}
+            </Text>
+            <Text style={styles.cardExperience}>
+              💼 Experience: {worker.work_experience} years
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -83,73 +196,13 @@ export default function RecCards({ cardData, title, vertical = false }: RecCards
       {vertical ? (
         <View>
           {cardData.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[styles.card, styles.verticalCard]}
-              onPress={() => handleCardPress(item)}
-            >
-              <Image source={{ uri: item.image }} style={styles.cardImage} />
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardPosition}>{item.position}</Text>
-                <Text style={styles.cardLocation}>
-                  <Text>📍 </Text>
-                  <Text>{item.location}</Text>
-                </Text>
-                <Text style={styles.cardSkills}>
-                  🗣️ Languages: {formatArray(item.languages)}
-                </Text>
-                <Text style={styles.cardSkills}>
-                  ⭐ Skills: {formatArray(item.skills)}
-                </Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardStartDate}>
-                    🗓️ Available from: {typeof item.start_date === 'string' 
-                      ? new Date(item.start_date).toLocaleDateString() 
-                      : item.start_date.toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.cardExperience}>
-                    💼 Experience: {item.work_experience} years
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            isJobPost(item) ? renderJobCard(item) : renderWorkerCard(item)
           ))}
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {cardData.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.card}
-              onPress={() => handleCardPress(item)}
-            >
-              <Image source={{ uri: item.image }} style={styles.cardImage} />
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardPosition}>{item.position}</Text>
-                <Text style={styles.cardLocation}>
-                  <Text>📍 </Text>
-                  <Text>{item.location}</Text>
-                </Text>
-                <Text style={styles.cardSkills}>
-                  🗣️ Languages: {formatArray(item.languages)}
-                </Text>
-                <Text style={styles.cardSkills}>
-                  ⭐ Skills: {formatArray(item.skills)}
-                </Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardStartDate}>
-                    🗓️ Available from: {typeof item.start_date === 'string' 
-                      ? new Date(item.start_date).toLocaleDateString() 
-                      : item.start_date.toLocaleDateString()}
-                  </Text>
-                  <Text style={styles.cardExperience}>
-                    💼 Experience: {item.work_experience} years
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            isJobPost(item) ? renderJobCard(item) : renderWorkerCard(item)
           ))}
         </ScrollView>
       )}
@@ -245,5 +298,15 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
     marginHorizontal: 0,
+  },
+  cardSalary: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  cardAccommodation: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
   },
 });

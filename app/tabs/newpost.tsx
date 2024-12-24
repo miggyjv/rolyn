@@ -17,12 +17,12 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../../utils/supabaseClient";
-import { decode as atob } from 'base-64';
-import * as FileSystem from 'expo-file-system';
+import { decode as atob } from "base-64";
+import * as FileSystem from "expo-file-system";
 
 // TYPE INTERFACES: Basically use this for reference of what the inputs for everything should look like
 interface Tag {
@@ -33,6 +33,81 @@ interface NewPostScreenProps {}
 
 const width = Dimensions.get("window").width;
 const height = Dimensions.get("window").height;
+
+interface JobPostFormData {
+  // Job Details
+  jobTitle: string;
+  jobType: string; // Full-time, Part-time, etc.
+  position: string; // Domestic Helper, Nanny, etc.
+  salary: string;
+  accommodationType: string; // Live-in, Live-out
+  startDate: string;
+  location: string;
+
+  // Requirements
+  experienceRequired: string;
+  educationRequired: string;
+  languagesRequired: Tag[];
+  skillsRequired: Tag[];
+  agePreference: string;
+
+  // Additional Details
+  numberOfPositions: string;
+  jobDescription: string;
+  benefits: string;
+  employerName: string;
+  contactInfo: string;
+
+  // Form Utilities
+  languageInput: string;
+  skillInput: string;
+  image: string | null;
+}
+
+// Move all these constants outside the component, near the top of the file after the interfaces
+const positionTypes = [
+  "Select position",
+  "Domestic Helper",
+  "Nanny",
+  "Driver",
+  "Cook",
+  "Gardener",
+  "Elderly Caregiver",
+  "Housekeeper",
+  "All-Around Helper",
+  "Tutor",
+  "Pet Caregiver",
+  "Other",
+];
+
+const jobTypes = [
+  "Select job type",
+  "Full-time",
+  "Part-time",
+  "Temporary",
+  "Contract",
+  "Other",
+];
+
+const accommodationTypes = [
+  "Select accommodation type",
+  "Live-in Required",
+  "Live-out Required",
+  "Live-in Preferred",
+  "Live-out Preferred",
+  "Flexible",
+];
+
+const educationLevels = [
+  "Select education level",
+  "No Specific Requirement",
+  "Primary School",
+  "Secondary School",
+  "High School",
+  "Diploma",
+  "Bachelor's Degree",
+  "Other",
+];
 
 const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   // COMMENTED OUT: Toggle functionality for future use
@@ -102,86 +177,92 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
     setIsServiceProvider((previousState) => !previousState);
   */
 
-  // Add this with your other constants
-  const educationLevels = [
-    "Select education level",
-    "Primary School",
-    "Secondary School",
-    "High School",
-    "Diploma",
-    "Bachelor's Degree",
-    "Master's Degree",
-    "PhD",
-    "Other",
-  ];
-
-  // Add this with your other constants
-  const jobTypes = [
-    "Select job type",
-    "Full-time",
-    "Part-time",
-    "Contract",
-    "Temporary",
-    "On-call",
-    "Other",
-  ];
-
-  // Add this with your other constants
-  const accommodationTypes = [
-    "Select accommodation preference",
-    "Live-in Required",
-    "Live-out Required",
-    "Live-in Preferred",
-    "Live-out Preferred",
-    "Flexible (Live-in or Live-out)",
-    "Accommodation Provided",
-    "No Accommodation Provided",
-    "Other",
-  ];
+  // Add formData state
+  const [formData, setFormData] = useState<JobPostFormData>({
+    jobTitle: "",
+    jobType: "",
+    position: "",
+    salary: "",
+    accommodationType: "",
+    startDate: "",
+    location: "",
+    experienceRequired: "",
+    educationRequired: "",
+    languagesRequired: [],
+    skillsRequired: [],
+    agePreference: "",
+    numberOfPositions: "",
+    jobDescription: "",
+    benefits: "",
+    employerName: "",
+    contactInfo: "",
+    languageInput: "",
+    skillInput: "",
+    image: null,
+  });
 
   // Handlers for adding tags
   const addLanguage = () => {
-    if (languageInput.trim() !== "") {
-      setLanguages([
-        ...languages,
-        { id: Date.now(), label: languageInput.trim() },
-      ]);
-      setLanguageInput("");
+    if (formData.languageInput?.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        languagesRequired: [
+          ...prev.languagesRequired,
+          { id: Date.now(), label: formData.languageInput.trim() },
+        ],
+        languageInput: "",
+      }));
     }
   };
 
   const addSkill = () => {
-    if (skillInput.trim() !== "") {
-      setSkills([...skills, { id: Date.now(), label: skillInput.trim() }]);
-      setSkillInput("");
+    if (formData.skillInput?.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        skillsRequired: [
+          ...prev.skillsRequired,
+          { id: Date.now(), label: formData.skillInput.trim() },
+        ],
+        skillInput: "",
+      }));
     }
   };
 
   // Handlers for removing tags
   const removeLanguage = (id: number) => {
-    setLanguages(languages.filter((lang) => lang.id !== id));
+    setFormData((prev) => ({
+      ...prev,
+      languagesRequired: prev.languagesRequired.filter(
+        (lang) => lang.id !== id
+      ),
+    }));
   };
 
   const removeSkill = (id: number) => {
-    setSkills(skills.filter((skill) => skill.id !== id));
+    setFormData((prev) => ({
+      ...prev,
+      skillsRequired: prev.skillsRequired.filter((skill) => skill.id !== id),
+    }));
   };
 
   // Add this helper function at the top level of your component
   const uploadImageToSupabase = async (uri: string) => {
     try {
-      console.log('Starting image upload process...');
-      
+      console.log("Starting image upload process...");
+
       // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('No authenticated session');
+        throw new Error("No authenticated session");
       }
 
       // 1. Read the file as base64
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      
+
       if (!base64) {
         throw new Error("Failed to read the selected image file.");
       }
@@ -204,25 +285,24 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
         .from("professionals")
         .upload(filename, byteArray, {
           contentType: "image/jpeg",
-          upsert: true
+          upsert: true,
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        console.error("Upload error:", uploadError);
         throw uploadError;
       }
 
       // 5. Get the public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('professionals')
-        .getPublicUrl(filename);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("professionals").getPublicUrl(filename);
 
-      console.log('Upload successful. Public URL:', publicUrl);
+      console.log("Upload successful. Public URL:", publicUrl);
       return publicUrl;
-
     } catch (error) {
-      console.error('Full upload error details:', error);
-      Alert.alert('Upload Error', 'Failed to upload image. Please try again.');
+      console.error("Full upload error details:", error);
+      Alert.alert("Upload Error", "Failed to upload image. Please try again.");
       throw error;
     }
   };
@@ -231,68 +311,45 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) throw new Error("No authenticated session");
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        Alert.alert('Error', 'You must be logged in to create a post');
-        return;
-      }
+      const jobData = {
+        employer_id: session.user.id,
+        title: formData.jobTitle,
+        position: formData.position,
+        job_type: formData.jobType,
+        salary: formData.salary,
+        location: formData.location,
+        accommodation_type: formData.accommodationType,
+        start_date: formData.startDate,
+        experience_required: formData.experienceRequired,
+        education_required: formData.educationRequired,
+        languages_required: formData.languagesRequired.map(
+          (lang) => lang.label
+        ),
+        skills_required: formData.skillsRequired.map((skill) => skill.label),
+        age_preference: formData.agePreference,
+        number_of_positions: parseInt(formData.numberOfPositions) || 1,
+        job_description: formData.jobDescription,
+        benefits: formData.benefits,
+        employer_name: formData.employerName,
+        contact_info: formData.contactInfo,
+        image: formData.image,
+        created_at: new Date().toISOString(),
+        status: "active",
+      };
 
-      // Upload image first if one is selected
-      let imageUrl = null;
-      if (selectedImage) {
-        imageUrl = await uploadImageToSupabase(selectedImage);
-      }
-
-      const { data, error } = await supabase
-        .from('professionals')
-        .insert([
-          {
-            name,
-            position,
-            personal_description: description,
-            languages: languages.map((lang) => lang.label),
-            skills: skills.map((skill) => skill.label),
-            phone_number: phoneNumber,
-            age: parseInt(age) || null,
-            education_level: educationLevel,
-            work_experience: workExperience,
-            job_type: jobType,
-            start_date: startDate,
-            curr_status: employmentStatus,
-            expected_salary: expectedSalary,
-            accommodation_pref: accommodation,
-            location,
-            user_id: session.user.id,
-            image: imageUrl // Add the image URL to the professional's data
-          }
-        ]);
+      const { error } = await supabase.from("job_posts").insert([jobData]);
 
       if (error) throw error;
-      
-      console.log("Successfully added professional:", data);
-      Alert.alert("Success", "Your service has been posted successfully!");
-
-      // Reset form
-      setName("");
-      setPosition("");
-      setDescription("");
-      setLanguages([]);
-      setSkills([]);
-      setPhoneNumber("");
-      setAge("");
-      setEducationLevel("");
-      setWorkExperience("");
-      setJobType("");
-      setStartDate("");
-      setEmploymentStatus("");
-      setExpectedSalary("");
-      setAccommodation("");
-      setLocation("");
-      setSelectedImage(null);
+      Alert.alert("Success", "Job posted successfully");
+      // Add navigation or reset form here
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error', 'An error occurred while creating the post');
+      console.error("Error posting job:", error);
+      Alert.alert("Error", "Failed to post job");
     } finally {
       setLoading(false);
     }
@@ -305,9 +362,13 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   // Add this function to handle image selection
   const handleImagePick = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to make this work!');
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Sorry, we need camera roll permissions to make this work!"
+        );
         return;
       }
 
@@ -320,21 +381,21 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
 
       if (!result.canceled && result.assets[0]) {
         const selectedUri = result.assets[0].uri;
-        console.log('Selected image URI:', selectedUri);
-        
+        console.log("Selected image URI:", selectedUri);
+
         // Verify the image exists
         const fileInfo = await FileSystem.getInfoAsync(selectedUri);
-        console.log('File info:', fileInfo);
-        
+        console.log("File info:", fileInfo);
+
         if (fileInfo.exists) {
           setSelectedImage(selectedUri);
         } else {
-          Alert.alert('Error', 'Selected image file does not exist');
+          Alert.alert("Error", "Selected image file does not exist");
         }
       }
     } catch (error) {
-      console.error('Image picker error:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      console.error("Image picker error:", error);
+      Alert.alert("Error", "Failed to pick image");
     }
   };
 
@@ -344,472 +405,126 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Add this UI component where you want the image upload to appear (probably near the top of your form) */}
+        <Text style={styles.sectionTitle}>Job Details</Text>
+
+        {/* Job Title */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Profile Photo</Text>
-          <TouchableOpacity
-            style={styles.imageUploadButton}
-            onPress={handleImagePick}
-          >
-            {selectedImage ? (
-              <Image
-                source={{ uri: selectedImage }}
-                style={styles.uploadedImage}
-              />
-            ) : (
-              <View style={styles.uploadPlaceholder}>
-                <Text style={styles.placeholderText}>Tap to upload photo</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* COMMENTED OUT: Toggle Section for future use
-        <View style={styles.toggleContainer}>
-          <Text style={styles.toggleLabel}>
-            {isServiceProvider ? "Posting a Service" : "Posting a Job Offer"}
-          </Text>
-          <Switch
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={isServiceProvider ? "#f5dd4b" : "#f4f3f4"}
-            onValueChange={toggleSwitch}
-            value={isServiceProvider}
-          />
-        </View>
-        */}
-
-        {/* Simple header */}
-        <View style={styles.headerContainer}>
-          <Text style={styles.toggleLabel}>Posting a Service</Text>
-        </View>
-
-        <Text style={styles.descriptionText}>
-          Provide a new service you are offering.
-        </Text>
-
-        {/* Name Field */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Employee Name</Text>
+          <Text style={styles.inputLabel}>Job Title</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Employee Name"
-            value={name}
-            onChangeText={setName}
-            placeholderTextColor={"#767577"}
+            value={formData.jobTitle}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, jobTitle: text }))
+            }
+            placeholder="Enter job title"
           />
         </View>
 
-        {/* For the position field, only use servicePositions array */}
+        {/* Position Type */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Position Offered</Text>
+          <Text style={styles.inputLabel}>Position</Text>
           <TouchableOpacity
-            style={styles.dropdownButton}
+            style={styles.textInput}
             onPress={() => setShowPositionModal(true)}
           >
             <Text
               style={
-                position === "Select a position"
-                  ? styles.placeholderText
-                  : styles.dropdownButtonText
+                formData.position ? styles.optionText : styles.placeholderText
               }
             >
-              {position || "Select a position"}
+              {formData.position || "Select position"}
             </Text>
           </TouchableOpacity>
-
-          <Modal
-            visible={showPositionModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowPositionModal(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowPositionModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Select Position</Text>
-                <ScrollView>
-                  {servicePositions.map((pos) => (
-                    <TouchableOpacity
-                      key={pos}
-                      style={styles.optionButton}
-                      onPress={() => {
-                        setPosition(pos);
-                        setShowPositionModal(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          position === pos && styles.selectedOptionText,
-                        ]}
-                      >
-                        {pos}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
         </View>
 
-        {/* Location Field */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Location</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder={"e.g. City, Country"}
-            value={location}
-            onChangeText={setLocation}
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
-        {/* Description Field */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Description</Text>
-          <TextInput
-            style={[styles.textInput, styles.multilineInput]}
-            placeholder="Provide a detailed description..."
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
-        {/* Add new fields after the Description field */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Phone Number</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter phone number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Age</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter age"
-            value={age}
-            onChangeText={setAge}
-            keyboardType="numeric"
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Education Level</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowEducationModal(true)}
-          >
-            <Text
-              style={
-                educationLevel === "Select education level"
-                  ? styles.placeholderText
-                  : styles.dropdownButtonText
-              }
-            >
-              {educationLevel || "Select education level"}
-            </Text>
-          </TouchableOpacity>
-
-          <Modal
-            visible={showEducationModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowEducationModal(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowEducationModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Select Education Level</Text>
-                <ScrollView>
-                  {educationLevels.map((level) => (
-                    <TouchableOpacity
-                      key={level}
-                      style={styles.optionButton}
-                      onPress={() => {
-                        setEducationLevel(level);
-                        setShowEducationModal(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          educationLevel === level && styles.selectedOptionText,
-                        ]}
-                      >
-                        {level}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Years of Work Experience</Text>
-          <TextInput
-            style={[styles.textInput]}
-            placeholder="How many years of experience do you have?"
-            value={workExperience}
-            onChangeText={setWorkExperience}
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
+        {/* Job Type */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Job Type</Text>
           <TouchableOpacity
-            style={styles.dropdownButton}
+            style={styles.textInput}
             onPress={() => setShowJobTypeModal(true)}
           >
             <Text
               style={
-                jobType === "Select job type"
-                  ? styles.placeholderText
-                  : styles.dropdownButtonText
+                formData.jobType ? styles.optionText : styles.placeholderText
               }
             >
-              {jobType || "Select job type"}
+              {formData.jobType || "Select job type"}
             </Text>
           </TouchableOpacity>
-
-          <Modal
-            visible={showJobTypeModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowJobTypeModal(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowJobTypeModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Select Job Type</Text>
-                <ScrollView>
-                  {jobTypes.map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={styles.optionButton}
-                      onPress={() => {
-                        setJobType(type);
-                        setShowJobTypeModal(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          jobType === type && styles.selectedOptionText,
-                        ]}
-                      >
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
         </View>
 
+        {/* Salary */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Start Date</Text>
-          <TouchableOpacity
-            style={[styles.textInput, styles.dateInput]}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={startDate ? styles.dateText : styles.placeholderText}>
-              {startDate
-                ? new Date(startDate).toLocaleDateString()
-                : "Select a date"}
-            </Text>
-          </TouchableOpacity>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={startDate ? new Date(startDate) : new Date()}
-              mode="date"
-              display="default"
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate && event.type !== "dismissed") {
-                  setStartDate(selectedDate.toISOString().split("T")[0]);
-                }
-              }}
-            />
-          )}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Current Employment Status</Text>
+          <Text style={styles.inputLabel}>Monthly Salary (HKD)</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="e.g., Employed, Unemployed"
-            value={employmentStatus}
-            onChangeText={setEmploymentStatus}
-            placeholderTextColor={"#767577"}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Expected Salary (Per Month)</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Enter expected salary"
-            value={expectedSalary}
-            onChangeText={setExpectedSalary}
+            value={formData.salary}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, salary: text }))
+            }
+            placeholder="Enter monthly salary"
             keyboardType="numeric"
-            placeholderTextColor={"#767577"}
           />
         </View>
 
+        {/* Location */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Accommodation Preferences</Text>
-          <TouchableOpacity
-            style={styles.dropdownButton}
-            onPress={() => setShowAccommodationModal(true)}
-          >
-            <Text
-              style={
-                accommodation === "Select accommodation preference"
-                  ? styles.placeholderText
-                  : styles.dropdownButtonText
-              }
-            >
-              {accommodation || "Select accommodation preference"}
-            </Text>
-          </TouchableOpacity>
-
-          <Modal
-            visible={showAccommodationModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowAccommodationModal(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setShowAccommodationModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>
-                  Select Accommodation Preference
-                </Text>
-                <ScrollView>
-                  {accommodationTypes.map((type) => (
-                    <TouchableOpacity
-                      key={type}
-                      style={styles.optionButton}
-                      onPress={() => {
-                        setAccommodation(type);
-                        setShowAccommodationModal(false);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.optionText,
-                          accommodation === type && styles.selectedOptionText,
-                        ]}
-                      >
-                        {type}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
+          <Text style={styles.inputLabel}>Job Location</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.location}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, location: text }))
+            }
+            placeholder="Enter job location"
+          />
         </View>
 
-        {/* Tags Section */}
-        <View style={styles.tagsSection}>
-          {/* Languages */}
-          <Text style={styles.sectionTitle}>Preferred Languages</Text>
-          <View style={styles.tagInputContainer}>
+        <Text style={styles.sectionTitle}>Requirements</Text>
+
+        {/* Experience Required */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Experience Required</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.experienceRequired}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, experienceRequired: text }))
+            }
+            placeholder="e.g., 2 years minimum"
+          />
+        </View>
+
+        {/* Languages Required */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Languages Required</Text>
+          <View style={styles.tagInput}>
             <TextInput
-              style={styles.tagInput}
-              placeholder="Add a language"
-              value={languageInput}
-              onChangeText={setLanguageInput}
+              style={[styles.textInput, styles.tagInputField]}
+              value={formData.languageInput}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, languageInput: text }))
+              }
+              placeholder="Add required language"
             />
             <TouchableOpacity style={styles.addButton} onPress={addLanguage}>
               <Text style={styles.addButtonText}>Add</Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            data={languages}
-            horizontal
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.tag}>
-                <Text style={styles.tagLabel}>{item.label}</Text>
-                <TouchableOpacity onPress={() => removeLanguage(item.id)}>
+          <View style={styles.tagsList}>
+            {formData.languagesRequired?.map((lang) => (
+              <View key={lang.id} style={styles.tag}>
+                <Text style={styles.tagLabel}>{lang.label}</Text>
+                <TouchableOpacity onPress={() => removeLanguage(lang.id)}>
                   <Text style={styles.removeTag}>×</Text>
                 </TouchableOpacity>
               </View>
-            )}
-            style={styles.tagsList}
-          />
-
-          {/* Skills */}
-          <Text style={styles.sectionTitle}>Main Skills Offered</Text>
-          <View style={styles.tagInputContainer}>
-            <TextInput
-              style={styles.tagInput}
-              placeholder="Add a skill"
-              value={skillInput}
-              onChangeText={setSkillInput}
-            />
-            <TouchableOpacity style={styles.addButton} onPress={addSkill}>
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
+            ))}
           </View>
-          <FlatList
-            data={skills}
-            horizontal
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.tag}>
-                <Text style={styles.tagLabel}>{item.label}</Text>
-                <TouchableOpacity onPress={() => removeSkill(item.id)}>
-                  <Text style={styles.removeTag}>×</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            style={styles.tagsList}
-          />
         </View>
 
-        {/* Submit Button */}
-        <TouchableOpacity 
-          style={[styles.submitButton, loading && styles.disabledButton]} 
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Post Service</Text>
-          )}
-        </TouchableOpacity>
+        {/* Additional sections... */}
       </ScrollView>
     </KeyboardAvoidingView>
   );

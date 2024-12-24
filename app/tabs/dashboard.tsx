@@ -1,184 +1,180 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Text, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useWindowDimensions } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/utils/supabaseClient';
 import RecCards from '@/components/RecCards';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import Loading from '@/components/Loading';
 
-interface Professional {
-  id: string;
-  user_id: string;
-  created_at: string;
-  title?: string;
-  description?: string;
-  image?: string;
-  position?: string;
-  skills?: string[];
-  distance?: number;
-  start_date?: string;
+interface WorkerProfile {
+  id: number;
+  image: string;
+  name: string;
+  position: string;
+  languages: string[];
+  skills: string[];
+  start_date: string | Date;
+  work_experience: string;
+  personal_description: string;
+  phone_number: string;
+  age: number;
+  education_level: string;
+  job_type: string;
+  curr_status: string;
+  expected_salary: string;
+  accommodation_pref: string;
+  location: string;
 }
 
-interface FetchPostsResponse {
-  data: Professional[] | null;
-  error: Error | null;
-}
-
-export default function Dashboard() {
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
+export default function EmployerDashboard() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const colorScheme = useColorScheme();
-  const { width } = useWindowDimensions();
+  const [refreshing, setRefreshing] = useState(false);
+  const [myJobPosts, setMyJobPosts] = useState([]);
+  const [recentWorkers, setRecentWorkers] = useState<WorkerProfile[]>([]);
+  const [matchingWorkers, setMatchingWorkers] = useState<WorkerProfile[]>([]);
 
-  const fetchUserPosts = useCallback(async (): Promise<FetchPostsResponse> => {
+  const fetchDashboardData = useCallback(async () => {
     try {
+      console.log("Starting fetchDashboardData");
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return { data: null, error: new Error('No session found') };
-
-      const { data, error } = await supabase
+      console.log("Current session:", session);
+      
+      // Even if no user, still fetch professionals
+      const { data: workers, error: workersError } = await supabase
         .from('professionals')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
+        .select('*');
 
-      if (error) return { data: null, error };
-      return { data, error: null };
+      console.log("Workers data:", workers);
+      console.log("Workers error:", workersError);
+
+      if (workersError) {
+        console.error('Error fetching workers:', workersError);
+        throw workersError;
+      }
+      
+      setRecentWorkers(workers || []);
+      setMatchingWorkers(workers || []);
+
+      // Only fetch job posts if we have a user
+      if (session?.user) {
+        const { data: jobPosts, error: jobsError } = await supabase
+          .from('job_posts')
+          .select('*')
+          .eq('employer_id', session.user.id)
+          .order('created_at', { ascending: false });
+
+        console.log("Job posts:", jobPosts, "Error:", jobsError);
+
+        if (jobsError) throw jobsError;
+        setMyJobPosts(jobPosts || []);
+      }
+
     } catch (error) {
-      return { data: null, error: error as Error };
+      console.error('Error in fetchDashboardData:', error);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  const handleFetchPosts = useCallback(async () => {
-    setIsLoading(true);
-    const { data, error } = await fetchUserPosts();
-    
-    if (error) {
-      console.error('Error fetching professionals:', error);
-      // Here you might want to use a proper error logging service like Sentry
-      return;
-    }
-    
-    if (data) setProfessionals(data);
-    setIsLoading(false);
-  }, [fetchUserPosts]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await handleFetchPosts();
-    setIsRefreshing(false);
-  }, [handleFetchPosts]);
-
   useEffect(() => {
-    handleFetchPosts();
-  }, [handleFetchPosts]);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-  const renderContent = () => {
-    if (isLoading) return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6B46C1" />
-      </View>
-    );
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-    if (professionals.length === 0) return (
-      <View style={styles.centerContainer}>
-        <Text 
-          style={[styles.emptyText, colorScheme === 'dark' && styles.darkText]}
-          accessibilityRole="text"
-        >
-          No posts yet. Create your first post to get started!
-        </Text>
-      </View>
-    );
-
-    return (
-      <RecCards 
-        cardData={professionals} 
-        title="My Posts" 
-        vertical={true}
-      />
-    );
-  };
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
-    <SafeAreaView 
-      edges={['right', 'left']} 
-      style={[styles.safeArea, colorScheme === 'dark' && styles.darkMode]}
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
-      <View 
-        style={[styles.header, { width }]}
-        accessibilityRole="header"
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => router.push('/tabs/newpost')}
       >
-        <Text 
-          style={[styles.headerTitle, colorScheme === 'dark' && styles.darkText]}
-          accessibilityRole="header"
-        >
-          Dashboard
-        </Text>
+        <Text style={styles.createButtonText}>Create New Job Post</Text>
+      </TouchableOpacity>
+
+      {/* Debug info */}
+      <View style={styles.debugContainer}>
+        <Text>Job Posts Count: {myJobPosts.length}</Text>
+        <Text>Recent Workers Count: {recentWorkers.length}</Text>
+        <Text>Matching Workers Count: {matchingWorkers.length}</Text>
       </View>
-      
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl 
-            refreshing={isRefreshing} 
-            onRefresh={handleRefresh}
-            accessibilityLabel="Pull to refresh content"
-          />
-        }
-      >
-        {renderContent()}
-      </ScrollView>
-    </SafeAreaView>
+
+      {/* My Job Posts */}
+      {myJobPosts.length > 0 ? (
+        <RecCards
+          cardData={myJobPosts}
+          title="My Job Posts"
+          cardType="job"
+          vertical={true}
+        />
+      ) : (
+        <Text style={styles.emptyText}>No job posts yet</Text>
+      )}
+
+      {/* Recent Workers */}
+      {recentWorkers.length > 0 ? (
+        <RecCards
+          cardData={recentWorkers}
+          title="Recent Workers"
+          cardType="worker"
+        />
+      ) : (
+        <Text style={styles.emptyText}>No workers available</Text>
+      )}
+
+      {/* Matching Workers */}
+      {matchingWorkers.length > 0 ? (
+        <RecCards
+          cardData={matchingWorkers}
+          title="Matching Your Requirements"
+          cardType="worker"
+        />
+      ) : (
+        <Text style={styles.emptyText}>No matching workers found</Text>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  darkMode: {
-    backgroundColor: '#1A1A1A',
-  },
   container: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 16,
-  },
-  header: {
-    padding: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2D3748',
-  },
-  darkText: {
-    color: '#E2E8F0',
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  createButton: {
+    backgroundColor: '#6B46C1',
+    padding: 15,
+    margin: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    padding: 20,
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  debugContainer: {
+    padding: 15,
+    backgroundColor: '#f0f0f0',
+    margin: 15,
+    borderRadius: 8,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#4A5568',
     textAlign: 'center',
-    lineHeight: 24,
+    color: '#666',
+    padding: 20,
+    fontStyle: 'italic',
   },
 }); 
