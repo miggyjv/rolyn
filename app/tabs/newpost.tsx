@@ -35,33 +35,26 @@ const width = Dimensions.get("window").width;
 const height = Dimensions.get("window").height;
 
 interface JobPostFormData {
-  // Job Details
-  jobTitle: string;
-  jobType: string; // Full-time, Part-time, etc.
-  position: string; // Domestic Helper, Nanny, etc.
-  salary: string;
-  accommodationType: string; // Live-in, Live-out
-  startDate: string;
+  employer_id: string;
+  position: string;
+  job_type: "Full-time" | "Part-time" | "Temporary" | "Contract" | "Other";
+  required_languages: Tag[];
+  required_skills: Tag[];
   location: string;
-
-  // Requirements
-  experienceRequired: string;
-  educationRequired: string;
-  languagesRequired: Tag[];
-  skillsRequired: Tag[];
-  agePreference: string;
-
-  // Additional Details
-  numberOfPositions: string;
-  jobDescription: string;
-  benefits: string;
-  employerName: string;
-  contactInfo: string;
-
-  // Form Utilities
+  salary_range: string;
+  accommodation_provided: boolean;
+  accommodation_type: string;
+  accommodation_details: string;
+  start_date: string;
+  description: string;
+  household_size: number;
+  has_children: boolean;
+  has_elderly: boolean;
+  has_pets: boolean;
+  education_required: string;
+  // Form utilities
   languageInput: string;
   skillInput: string;
-  image: string | null;
 }
 
 // Move all these constants outside the component, near the top of the file after the interfaces
@@ -179,26 +172,30 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
 
   // Add formData state
   const [formData, setFormData] = useState<JobPostFormData>({
-    jobTitle: "",
-    jobType: "",
+    employer_id: "",
     position: "",
-    salary: "",
-    accommodationType: "",
-    startDate: "",
+    job_type: "Select job type" as
+      | "Full-time"
+      | "Part-time"
+      | "Temporary"
+      | "Contract"
+      | "Other",
+    required_languages: [],
+    required_skills: [],
     location: "",
-    experienceRequired: "",
-    educationRequired: "",
-    languagesRequired: [],
-    skillsRequired: [],
-    agePreference: "",
-    numberOfPositions: "",
-    jobDescription: "",
-    benefits: "",
-    employerName: "",
-    contactInfo: "",
+    salary_range: "",
+    accommodation_provided: false,
+    accommodation_type: "",
+    accommodation_details: "",
+    start_date: "",
+    description: "",
+    household_size: 0,
+    has_children: false,
+    has_elderly: false,
+    has_pets: false,
+    education_required: "",
     languageInput: "",
     skillInput: "",
-    image: null,
   });
 
   // Handlers for adding tags
@@ -206,8 +203,8 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
     if (formData.languageInput?.trim()) {
       setFormData((prev) => ({
         ...prev,
-        languagesRequired: [
-          ...prev.languagesRequired,
+        required_languages: [
+          ...prev.required_languages,
           { id: Date.now(), label: formData.languageInput.trim() },
         ],
         languageInput: "",
@@ -219,8 +216,8 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
     if (formData.skillInput?.trim()) {
       setFormData((prev) => ({
         ...prev,
-        skillsRequired: [
-          ...prev.skillsRequired,
+        required_skills: [
+          ...prev.required_skills,
           { id: Date.now(), label: formData.skillInput.trim() },
         ],
         skillInput: "",
@@ -232,7 +229,7 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   const removeLanguage = (id: number) => {
     setFormData((prev) => ({
       ...prev,
-      languagesRequired: prev.languagesRequired.filter(
+      required_languages: prev.required_languages.filter(
         (lang) => lang.id !== id
       ),
     }));
@@ -241,7 +238,7 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   const removeSkill = (id: number) => {
     setFormData((prev) => ({
       ...prev,
-      skillsRequired: prev.skillsRequired.filter((skill) => skill.id !== id),
+      required_skills: prev.required_skills.filter((skill) => skill.id !== id),
     }));
   };
 
@@ -310,6 +307,12 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   // Then modify the handleSubmit function
   const handleSubmit = async () => {
     try {
+      // Validate job type before submitting
+      if (formData.job_type === "Select job type") {
+        Alert.alert("Error", "Please select a job type");
+        return;
+      }
+
       setLoading(true);
       const {
         data: { session },
@@ -318,26 +321,23 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
 
       const jobData = {
         employer_id: session.user.id,
-        title: formData.jobTitle,
         position: formData.position,
-        job_type: formData.jobType,
-        salary: formData.salary,
-        location: formData.location,
-        accommodation_type: formData.accommodationType,
-        start_date: formData.startDate,
-        experience_required: formData.experienceRequired,
-        education_required: formData.educationRequired,
-        languages_required: formData.languagesRequired.map(
+        job_type: formData.job_type,
+        required_languages: formData.required_languages.map(
           (lang) => lang.label
         ),
-        skills_required: formData.skillsRequired.map((skill) => skill.label),
-        age_preference: formData.agePreference,
-        number_of_positions: parseInt(formData.numberOfPositions) || 1,
-        job_description: formData.jobDescription,
-        benefits: formData.benefits,
-        employer_name: formData.employerName,
-        contact_info: formData.contactInfo,
-        image: formData.image,
+        required_skills: formData.required_skills.map((skill) => skill.label),
+        location: formData.location,
+        salary_range: formData.salary_range,
+        accommodation_provided: formData.accommodation_provided,
+        accommodation_type: formData.accommodation_type,
+        accommodation_details: formData.accommodation_details,
+        start_date: formData.start_date,
+        description: formData.description,
+        household_size: formData.household_size,
+        has_children: formData.has_children,
+        has_elderly: formData.has_elderly,
+        has_pets: formData.has_pets,
         created_at: new Date().toISOString(),
         status: "active",
       };
@@ -346,7 +346,33 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
 
       if (error) throw error;
       Alert.alert("Success", "Job posted successfully");
-      // Add navigation or reset form here
+      // Reset form after successful post
+      setFormData({
+        employer_id: "",
+        position: "",
+        job_type: "Select job type" as
+          | "Full-time"
+          | "Part-time"
+          | "Temporary"
+          | "Contract"
+          | "Other",
+        required_languages: [],
+        required_skills: [],
+        location: "",
+        salary_range: "",
+        accommodation_provided: false,
+        accommodation_type: "",
+        accommodation_details: "",
+        start_date: "",
+        description: "",
+        household_size: 0,
+        has_children: false,
+        has_elderly: false,
+        has_pets: false,
+        education_required: "",
+        languageInput: "",
+        skillInput: "",
+      });
     } catch (error) {
       console.error("Error posting job:", error);
       Alert.alert("Error", "Failed to post job");
@@ -358,6 +384,7 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
   // Add these state variables
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Add this function to handle image selection
   const handleImagePick = async () => {
@@ -407,20 +434,7 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.sectionTitle}>Job Details</Text>
 
-        {/* Job Title */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Job Title</Text>
-          <TextInput
-            style={styles.textInput}
-            value={formData.jobTitle}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, jobTitle: text }))
-            }
-            placeholder="Enter job title"
-          />
-        </View>
-
-        {/* Position Type */}
+        {/* Position */}
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Position</Text>
           <TouchableOpacity
@@ -446,31 +460,31 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
           >
             <Text
               style={
-                formData.jobType ? styles.optionText : styles.placeholderText
+                formData.job_type ? styles.optionText : styles.placeholderText
               }
             >
-              {formData.jobType || "Select job type"}
+              {formData.job_type || "Select job type"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Salary */}
+        {/* Salary Range */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Monthly Salary (HKD)</Text>
+          <Text style={styles.inputLabel}>Salary Range (HKD) Per Month</Text>
           <TextInput
             style={styles.textInput}
-            value={formData.salary}
+            value={formData.salary_range}
             onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, salary: text }))
+              setFormData((prev) => ({ ...prev, salary_range: text }))
             }
-            placeholder="Enter monthly salary"
+            placeholder="e.g., 5000-7000"
             keyboardType="numeric"
           />
         </View>
 
         {/* Location */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Job Location</Text>
+          <Text style={styles.inputLabel}>Location</Text>
           <TextInput
             style={styles.textInput}
             value={formData.location}
@@ -481,24 +495,45 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>Requirements</Text>
-
-        {/* Experience Required */}
+        {/* Start Date */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Experience Required</Text>
-          <TextInput
+          <Text style={styles.inputLabel}>Start Date</Text>
+          <TouchableOpacity
             style={styles.textInput}
-            value={formData.experienceRequired}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, experienceRequired: text }))
-            }
-            placeholder="e.g., 2 years minimum"
-          />
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text
+              style={
+                formData.start_date ? styles.optionText : styles.placeholderText
+              }
+            >
+              {formData.start_date || "Select start date"}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display="default"
+              onChange={(event, selected) => {
+                setShowDatePicker(false);
+                if (selected) {
+                  setSelectedDate(selected);
+                  const formattedDate = selected.toISOString().split("T")[0];
+                  setFormData((prev) => ({
+                    ...prev,
+                    start_date: formattedDate,
+                  }));
+                }
+              }}
+              minimumDate={new Date()}
+            />
+          )}
         </View>
 
         {/* Languages Required */}
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Languages Required</Text>
+          <Text style={styles.inputLabel}>Required Languages</Text>
           <View style={styles.tagInput}>
             <TextInput
               style={[styles.textInput, styles.tagInputField]}
@@ -513,7 +548,7 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
             </TouchableOpacity>
           </View>
           <View style={styles.tagsList}>
-            {formData.languagesRequired?.map((lang) => (
+            {formData.required_languages?.map((lang) => (
               <View key={lang.id} style={styles.tag}>
                 <Text style={styles.tagLabel}>{lang.label}</Text>
                 <TouchableOpacity onPress={() => removeLanguage(lang.id)}>
@@ -524,8 +559,259 @@ const NewPostScreen: React.FC<NewPostScreenProps> = () => {
           </View>
         </View>
 
-        {/* Additional sections... */}
+        {/* Skills Required */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Required Skills</Text>
+          <View style={styles.tagInput}>
+            <TextInput
+              style={[styles.textInput, styles.tagInputField]}
+              value={formData.skillInput}
+              onChangeText={(text) =>
+                setFormData((prev) => ({ ...prev, skillInput: text }))
+              }
+              placeholder="Add required skill"
+            />
+            <TouchableOpacity style={styles.addButton} onPress={addSkill}>
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.tagsList}>
+            {formData.required_skills?.map((skill) => (
+              <View key={skill.id} style={styles.tag}>
+                <Text style={styles.tagLabel}>{skill.label}</Text>
+                <TouchableOpacity onPress={() => removeSkill(skill.id)}>
+                  <Text style={styles.removeTag}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Job Description */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Job Description</Text>
+          <TextInput
+            style={[styles.textInput, styles.multilineInput]}
+            value={formData.description}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, description: text }))
+            }
+            placeholder="Describe the job responsibilities, requirements, and any other important details..."
+            multiline
+            numberOfLines={6}
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Household Details */}
+        <Text style={styles.sectionTitle}>Household Details</Text>
+
+        {/* Household Size */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Household Size</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.household_size?.toString()}
+            onChangeText={(text) =>
+              setFormData((prev) => ({
+                ...prev,
+                household_size: parseInt(text) || 0,
+              }))
+            }
+            placeholder="Number of people in household"
+            keyboardType="numeric"
+          />
+        </View>
+
+        {/* Household Composition */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Household Composition</Text>
+          <View style={styles.switchesContainer}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelContainer}>
+                <Text style={styles.switchLabel}>Children Present</Text>
+                <Text style={styles.switchSubLabel}>
+                  Select if there are children in the household
+                </Text>
+              </View>
+              <Switch
+                value={formData.has_children}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, has_children: value }))
+                }
+                trackColor={{ false: "#E0E0E0", true: "#4A2D8B40" }}
+                thumbColor={formData.has_children ? "#4A2D8B" : "#f4f3f4"}
+                ios_backgroundColor="#E0E0E0"
+              />
+            </View>
+
+            <View style={styles.switchDivider} />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelContainer}>
+                <Text style={styles.switchLabel}>Elderly Present</Text>
+                <Text style={styles.switchSubLabel}>
+                  Select if there are elderly people in the household
+                </Text>
+              </View>
+              <Switch
+                value={formData.has_elderly}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, has_elderly: value }))
+                }
+                trackColor={{ false: "#E0E0E0", true: "#4A2D8B40" }}
+                thumbColor={formData.has_elderly ? "#4A2D8B" : "#f4f3f4"}
+                ios_backgroundColor="#E0E0E0"
+              />
+            </View>
+
+            <View style={styles.switchDivider} />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelContainer}>
+                <Text style={styles.switchLabel}>Pets Present</Text>
+                <Text style={styles.switchSubLabel}>
+                  Select if there are pets in the household
+                </Text>
+              </View>
+              <Switch
+                value={formData.has_pets}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, has_pets: value }))
+                }
+                trackColor={{ false: "#E0E0E0", true: "#4A2D8B40" }}
+                thumbColor={formData.has_pets ? "#4A2D8B" : "#f4f3f4"}
+                ios_backgroundColor="#E0E0E0"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Accommodation */}
+        <Text style={styles.sectionTitle}>Accommodation Details</Text>
+
+        <View style={styles.inputContainer}>
+          <View style={styles.switchContainer}>
+            <Text style={styles.inputLabel}>Accommodation Provided</Text>
+            <Switch
+              value={formData.accommodation_provided}
+              onValueChange={(value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  accommodation_provided: value,
+                }))
+              }
+              trackColor={{ false: "#E0E0E0", true: "#4A2D8B40" }}
+              thumbColor={
+                formData.accommodation_provided ? "#4A2D8B" : "#f4f3f4"
+              }
+            />
+          </View>
+        </View>
+
+        {formData.accommodation_provided && (
+          <>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Accommodation Type</Text>
+              <TouchableOpacity
+                style={styles.textInput}
+                onPress={() => setShowAccommodationModal(true)}
+              >
+                <Text
+                  style={
+                    formData.accommodation_type
+                      ? styles.optionText
+                      : styles.placeholderText
+                  }
+                >
+                  {formData.accommodation_type || "Select accommodation type"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Accommodation Details</Text>
+              <TextInput
+                style={[styles.textInput, styles.multilineInput]}
+                value={formData.accommodation_details}
+                onChangeText={(text) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    accommodation_details: text,
+                  }))
+                }
+                placeholder="Describe the accommodation (e.g., private room, shared bathroom, amenities provided)"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+          </>
+        )}
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.disabledButton]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? "Posting..." : "Post Job"}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      <SelectionModal
+        visible={showPositionModal}
+        onClose={() => setShowPositionModal(false)}
+        title="Select Position"
+        options={positionTypes}
+        selectedValue={formData.position}
+        onSelect={(value) =>
+          setFormData((prev) => ({ ...prev, position: value }))
+        }
+      />
+
+      <SelectionModal
+        visible={showJobTypeModal}
+        onClose={() => setShowJobTypeModal(false)}
+        title="Select Job Type"
+        options={jobTypes}
+        selectedValue={formData.job_type}
+        onSelect={(value) =>
+          setFormData((prev) => ({
+            ...prev,
+            job_type: value as
+              | "Full-time"
+              | "Part-time"
+              | "Temporary"
+              | "Contract"
+              | "Other",
+          }))
+        }
+      />
+
+      <SelectionModal
+        visible={showAccommodationModal}
+        onClose={() => setShowAccommodationModal(false)}
+        title="Select Accommodation Type"
+        options={accommodationTypes}
+        selectedValue={formData.accommodation_type}
+        onSelect={(value) =>
+          setFormData((prev) => ({ ...prev, accommodation_type: value }))
+        }
+      />
+
+      <SelectionModal
+        visible={showEducationModal}
+        onClose={() => setShowEducationModal(false)}
+        title="Select Education Level"
+        options={educationLevels}
+        selectedValue={formData.education_required}
+        onSelect={(value) =>
+          setFormData((prev) => ({ ...prev, education_required: value }))
+        }
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -589,6 +875,7 @@ const styles = StyleSheet.create({
   multilineInput: {
     height: 120,
     textAlignVertical: "top",
+    paddingTop: 12,
   },
   tagsSection: {
     marginBottom: 25,
@@ -602,10 +889,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "600",
-    marginBottom: 12,
     color: "#4A2D8B",
+    marginTop: 24,
+    marginBottom: 16,
   },
   tagInputContainer: {
     flexDirection: "row",
@@ -613,33 +901,29 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tagInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  tagInputField: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
+    marginRight: 10,
   },
   addButton: {
-    marginLeft: 10,
     backgroundColor: "#4A2D8B",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    padding: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: "center",
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 16,
     fontWeight: "500",
   },
   tagsList: {
-    marginBottom: 15,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 8,
   },
   tag: {
     flexDirection: "row",
@@ -647,17 +931,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#4A2D8B20",
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 10,
+    paddingVertical: 6,
+    marginRight: 8,
     marginBottom: 8,
   },
   tagLabel: {
     fontSize: 14,
     color: "#4A2D8B",
-    fontWeight: "500",
+    marginRight: 4,
   },
   removeTag: {
-    marginLeft: 8,
     fontSize: 18,
     color: "#4A2D8B",
     fontWeight: "600",
@@ -712,7 +995,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 16,
-    color: "#666",
+    color: "#999",
   },
   dropdownButton: {
     borderWidth: 1,
@@ -773,6 +1056,90 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.7,
   },
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  switchesContainer: {
+    backgroundColor: "#F8F8F8",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  switchLabelContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 4,
+  },
+  switchSubLabel: {
+    fontSize: 14,
+    color: "#666",
+  },
+  switchDivider: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginVertical: 8,
+  },
 });
+
+const SelectionModal = ({
+  visible,
+  onClose,
+  title,
+  options,
+  selectedValue,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  options: string[];
+  selectedValue: string;
+  onSelect: (value: string) => void;
+}) => {
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <ScrollView>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.optionButton}
+                onPress={() => {
+                  onSelect(option);
+                  onClose();
+                }}
+              >
+                <Text
+                  style={[
+                    styles.optionText,
+                    option === selectedValue && styles.selectedOptionText,
+                  ]}
+                >
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default NewPostScreen;

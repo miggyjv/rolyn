@@ -9,7 +9,6 @@ import {
   RefreshControl,
 } from "react-native";
 import { Button, Input } from "@rneui/themed";
-import { supabase as db } from "@/utils/supabaseClient";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
@@ -17,11 +16,8 @@ import * as FileSystem from "expo-file-system";
 
 export default function Account() {
   const [loading, setLoading] = useState(true);
-  const [username, setUsername] = useState("");
-  const [full_name, setFullname] = useState("");
-  const [website, setWebsite] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [role, setRole] = useState("");
 
   const [session, setSession] = useState(null);
   const router = useRouter();
@@ -31,14 +27,14 @@ export default function Account() {
       setLoading(true);
       const {
         data: { session },
-      } = await db.auth.getSession();
+      } = await supabase.auth.getSession();
       setSession(session);
       setLoading(false);
     })();
 
     const {
       data: { subscription },
-    } = db.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
@@ -56,7 +52,7 @@ export default function Account() {
 
       const { data, error, status } = await supabase
         .from("profiles")
-        .select(`username, website, full_name, avatar_url`)
+        .select(`email, role`)
         .eq("id", session.user.id)
         .single();
 
@@ -65,10 +61,7 @@ export default function Account() {
       }
 
       if (data) {
-        setUsername(data.username);
-        setFullname(data.full_name);
-        setWebsite(data.website);
-        setAvatarUrl(data.avatar_url);
+        setRole(data.role);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -181,27 +174,7 @@ export default function Account() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      // refreshControl={
-      //   <RefreshControl
-      //     refreshing={isRefreshing}
-      //     onRefresh={() => {
-      //       setIsRefreshing(true);
-      //       getProfile();
-      //     }}
-      //   />
-      // }
-    >
-      {/* <Image source={{ uri: avatarUrl }} style={styles.cardImage} />
-
-      <Button
-        title="Update Profile Photo"
-        onPress={pickImageAndUpload}
-        disabled={loading}
-        style={styles.verticallySpaced}
-      /> */}
-
+    <ScrollView style={styles.container}>
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Input
           label="Email"
@@ -210,57 +183,23 @@ export default function Account() {
           labelStyle={styles.inputLabel}
           inputContainerStyle={styles.inputContainer}
           inputStyle={styles.input}
-          disabledInputStyle={styles.disabledInput}
         />
       </View>
-      <View style={styles.verticallySpaced}>
+      <View style={[styles.verticallySpaced]}>
         <Input
-          label="Displayed Name"
-          value={username || ""}
-          onChangeText={(text) => setUsername(text)}
+          label="Account Type"
+          value={role || "Not specified"}
+          disabled
           labelStyle={styles.inputLabel}
           inputContainerStyle={styles.inputContainer}
           inputStyle={styles.input}
-          placeholder="Enter your display name"
-          placeholderTextColor="#999"
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Full Name"
-          value={full_name || ""}
-          onChangeText={(text) => setFullname(text)}
-          labelStyle={styles.inputLabel}
-          inputContainerStyle={styles.inputContainer}
-          inputStyle={styles.input}
-          placeholder="Enter your full name"
-          placeholderTextColor="#999"
-        />
-      </View>
-      <View style={styles.verticallySpaced}>
-        <Input
-          label="Personal Website/LinkedIn"
-          value={website || ""}
-          onChangeText={(text) => setWebsite(text)}
-          labelStyle={styles.inputLabel}
-          inputContainerStyle={styles.inputContainer}
-          inputStyle={styles.input}
-          placeholder="Enter your website or LinkedIn URL"
-          placeholderTextColor="#999"
         />
       </View>
 
       <View style={[styles.verticallySpaced, styles.mt20]}>
         <Button
           title={loading ? "Loading ..." : "Update"}
-          onPress={() =>
-            updateProfile({
-              username,
-              full_name,
-              website,
-              avatar_url: avatarUrl,
-            })
-          }
+          onPress={() => getProfile()}
           disabled={loading}
           buttonStyle={styles.updateButton}
           titleStyle={styles.buttonTitle}
@@ -286,7 +225,7 @@ export default function Account() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 20,
   },
   verticallySpaced: {
@@ -327,12 +266,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   input: {
-    color: "#333",
+    color: "#000",
     fontSize: 16,
-  },
-  disabledInput: {
-    color: "#666",
-    backgroundColor: "#F0F0F0",
+    fontWeight: "500",
   },
   updateButton: {
     backgroundColor: "#4A2D8B",
@@ -370,4 +306,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#9D94BC",
   },
 });
-
