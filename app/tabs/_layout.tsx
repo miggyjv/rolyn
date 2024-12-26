@@ -1,19 +1,42 @@
 import { Tabs } from "expo-router";
-import React from "react";
-import { Platform } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, View, Text } from "react-native";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import { HapticTab } from "@/components/HapticTab";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 import TabBarBackground from "@/components/ui/TabBarBackground";
-import { Colors } from "@/constants/Colors";
-import { View, Text } from "react-native";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useColorScheme } from "@/hooks/useColorScheme";
-
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const [userRole, setUserRole] = useState<"employer" | "worker" | null>(null);
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        console.log("Current user role:", profileData.role);
+        setUserRole(profileData.role);
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    }
+
+    fetchUserRole();
+  }, []);
 
   return (
     <Tabs
@@ -70,6 +93,7 @@ export default function TabLayout() {
           ),
           headerShown: true,
           headerTitle: "Make A New Post",
+          href: userRole === "employer" ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -81,23 +105,7 @@ export default function TabLayout() {
           ),
           headerShown: true,
           headerTitle: "My Information",
-        }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{
-          title: "Account",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
-          ),
-          headerShown: true,
-          headerTitle: "Account Details",
-        }}
-      />
-      <Tabs.Screen
-        name="Filter"
-        options={{
-          href: null,
+          href: userRole === "worker" ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -129,6 +137,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: "Account",
+          tabBarIcon: ({ color }) => (
+            <FontAwesome size={28} name="cog" color={color} />
+          ),
+          headerShown: true,
+          headerTitle: "Account Details",
+        }}
+      />
+      <Tabs.Screen
+        name="Filter"
+        options={{
+          href: null,
+        }}
+      />
+      
     </Tabs>
   );
 }
