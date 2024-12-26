@@ -1,9 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { supabase } from '@/utils/supabaseClient';
-import RecCards from '@/components/RecCards';
-import Loading from '@/components/Loading';
+import { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { supabase } from "@/utils/supabaseClient";
+import RecCards from "@/components/RecCards";
+import Loading from "@/components/Loading";
 
 interface WorkerProfile {
   id: number;
@@ -25,52 +32,79 @@ interface WorkerProfile {
   location: string;
 }
 
-export default function EmployerDashboard() {
+export default function Dashboard() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [userRole, setUserRole] = useState<"employer" | "worker" | null>(null);
   const [myJobPosts, setMyJobPosts] = useState([]);
+  const [myProfile, setMyProfile] = useState<WorkerProfile | null>(null);
   const [recentWorkers, setRecentWorkers] = useState<WorkerProfile[]>([]);
   const [matchingWorkers, setMatchingWorkers] = useState<WorkerProfile[]>([]);
 
+  const fetchUserRole = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setUserRole(profileData.role);
+      return profileData.role;
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      return null;
+    }
+  };
+
   const fetchDashboardData = useCallback(async () => {
     try {
-      console.log("Starting fetchDashboardData");
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log("Current session:", session);
-      
-      // Even if no user, still fetch professionals
-      const { data: workers, error: workersError } = await supabase
-        .from('professionals')
-        .select('*');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-      console.log("Workers data:", workers);
-      console.log("Workers error:", workersError);
+      const role = await fetchUserRole();
 
-      if (workersError) {
-        console.error('Error fetching workers:', workersError);
-        throw workersError;
-      }
-      
-      setRecentWorkers(workers || []);
-      setMatchingWorkers(workers || []);
-
-      // Only fetch job posts if we have a user
-      if (session?.user) {
+      if (role === "employer") {
+        // Fetch employer's job posts
         const { data: jobPosts, error: jobsError } = await supabase
-          .from('job_posts')
-          .select('*')
-          .eq('employer_id', session.user.id)
-          .order('created_at', { ascending: false });
-
-        console.log("Job posts:", jobPosts, "Error:", jobsError);
+          .from("job_posts")
+          .select("*")
+          .eq("employer_id", user.id)
+          .order("created_at", { ascending: false });
 
         if (jobsError) throw jobsError;
         setMyJobPosts(jobPosts || []);
-      }
 
+        // Fetch workers for employer view
+        const { data: workers, error: workersError } = await supabase
+          .from("professionals")
+          .select("*");
+
+        if (workersError) throw workersError;
+        setRecentWorkers(workers || []);
+        setMatchingWorkers(workers || []);
+      } else if (role === "worker") {
+        // Fetch worker's own profile
+        const { data: workerProfile, error: profileError } = await supabase
+          .from("professionals")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        setMyProfile(workerProfile);
+      }
     } catch (error) {
-      console.error('Error in fetchDashboardData:', error);
+      console.error("Error in fetchDashboardData:", error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -97,52 +131,61 @@ export default function EmployerDashboard() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => router.push('/tabs/newpost')}
-      >
-        <Text style={styles.createButtonText}>Create New Job Post</Text>
-      </TouchableOpacity>
+      {userRole === "employer" ? (
+        // Employer View
+        <>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => router.push("/tabs/newpost")}
+          >
+            <Text style={styles.createButtonText}>Create New Job Post</Text>
+          </TouchableOpacity>
 
-      {/* Debug info */}
-      <View style={styles.debugContainer}>
-        <Text>Job Posts Count: {myJobPosts.length}</Text>
-        <Text>Recent Workers Count: {recentWorkers.length}</Text>
-        <Text>Matching Workers Count: {matchingWorkers.length}</Text>
-      </View>
+          {myJobPosts.length > 0 ? (
+            <RecCards
+              cardData={myJobPosts}
+              title="My Job Posts"
+              cardType="job"
+              vertical={true}
+            />
+          ) : (
+            <Text style={styles.emptyText}>No job posts yet</Text>
+          )}
 
-      {/* My Job Posts */}
-      {myJobPosts.length > 0 ? (
-        <RecCards
-          cardData={myJobPosts}
-          title="My Job Posts"
-          cardType="job"
-          vertical={true}
-        />
+          {recentWorkers.length > 0 ? (
+            <RecCards
+              cardData={recentWorkers}
+              title="Recent Workers"
+              cardType="worker"
+            />
+          ) : (
+            <Text style={styles.emptyText}>No workers available</Text>
+          )}
+
+          {matchingWorkers.length > 0 ? (
+            <RecCards
+              cardData={matchingWorkers}
+              title="Matching Your Requirements"
+              cardType="worker"
+            />
+          ) : (
+            <Text style={styles.emptyText}>No matching workers found</Text>
+          )}
+        </>
       ) : (
-        <Text style={styles.emptyText}>No job posts yet</Text>
-      )}
-
-      {/* Recent Workers */}
-      {recentWorkers.length > 0 ? (
-        <RecCards
-          cardData={recentWorkers}
-          title="Recent Workers"
-          cardType="worker"
-        />
-      ) : (
-        <Text style={styles.emptyText}>No workers available</Text>
-      )}
-
-      {/* Matching Workers */}
-      {matchingWorkers.length > 0 ? (
-        <RecCards
-          cardData={matchingWorkers}
-          title="Matching Your Requirements"
-          cardType="worker"
-        />
-      ) : (
-        <Text style={styles.emptyText}>No matching workers found</Text>
+        // Worker View
+        <>
+          {myProfile ? (
+            <RecCards
+              cardData={[myProfile]}
+              title="My Profile"
+              cardType="worker"
+              vertical={true}
+            />
+          ) : (
+            <Text style={styles.emptyText}>Profile not found</Text>
+          )}
+        </>
       )}
     </ScrollView>
   );
@@ -151,30 +194,30 @@ export default function EmployerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   createButton: {
-    backgroundColor: '#6B46C1',
+    backgroundColor: "#6B46C1",
     padding: 15,
     margin: 15,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   createButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   debugContainer: {
     padding: 15,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     margin: 15,
     borderRadius: 8,
   },
   emptyText: {
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
     padding: 20,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
-}); 
+});
