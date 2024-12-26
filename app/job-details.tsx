@@ -2,16 +2,113 @@ import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 
 export default function JobDetailsScreen() {
-  const { 
-    id, 
-    name, 
-    image, 
-    positionNeeded, 
+  const params = useLocalSearchParams();
+  
+  // Check if this is a job post by looking for job-specific fields
+  const isJobPost = 'position' in params && !('name' in params);
+
+  if (isJobPost) {
+    // Job Post View
+    const {
+      id,
+      position,
+      jobType,
+      languages,
+      skills,
+      location,
+      salaryRange,
+      accommodation,
+      startDate,
+      description,
+      householdDetails,
+    } = params;
+
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>{position}</Text>
+
+          {/* Main Info Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Main Information</Text>
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>📋 Position:</Text>
+              <Text style={styles.value}>{position}</Text>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>📍 Location:</Text>
+              <Text style={styles.value}>{location}</Text>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>💼 Job Type:</Text>
+              <Text style={styles.value}>{jobType}</Text>
+            </View>
+          </View>
+
+          {/* Requirements Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Requirements</Text>
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>🗣️ Languages:</Text>
+              <Text style={styles.value}>{languages}</Text>
+            </View>
+
+            {skills && (
+              <View style={styles.infoContainer}>
+                <Text style={styles.label}>⭐ Skills:</Text>
+                <Text style={styles.value}>{skills}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Work Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Work Details</Text>
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>🗓️ Start Date:</Text>
+              <Text style={styles.value}>{startDate}</Text>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>💰 Salary Range:</Text>
+              <Text style={styles.value}>{salaryRange}</Text>
+            </View>
+
+            <View style={styles.infoContainer}>
+              <Text style={styles.label}>🏠 Accommodation:</Text>
+              <Text style={styles.value}>{accommodation}</Text>
+            </View>
+          </View>
+
+          {/* Household Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Household Details</Text>
+            <Text style={styles.description}>{householdDetails}</Text>
+          </View>
+
+          {/* Job Description Section */}
+          {description && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Job Description</Text>
+              <Text style={styles.description}>{description}</Text>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // Worker Profile View (existing code)
+  const {
+    name,
+    image,
+    positionNeeded,
     languages,
-    skills, 
+    skills,
     startDate,
     workExperience,
-    // Additional params from Supabase table
     personalDescription,
     phoneNumber,
     age,
@@ -21,7 +118,7 @@ export default function JobDetailsScreen() {
     expectedSalary,
     accommodationPref,
     location,
-  } = useLocalSearchParams();
+  } = params;
 
   return (
     <ScrollView style={styles.container}>
