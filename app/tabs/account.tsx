@@ -196,17 +196,6 @@ export default function Account() {
         />
       </View>
 
-      <View style={[styles.verticallySpaced, styles.mt20]}>
-        <Button
-          title={loading ? "Loading ..." : "Update"}
-          onPress={() => getProfile()}
-          disabled={loading}
-          buttonStyle={styles.updateButton}
-          titleStyle={styles.buttonTitle}
-          disabledStyle={styles.disabledButton}
-        />
-      </View>
-
       <View style={styles.verticallySpaced}>
         <Button
           title="Sign Out"

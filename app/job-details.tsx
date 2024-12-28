@@ -3,9 +3,9 @@ import { useLocalSearchParams } from "expo-router";
 
 export default function JobDetailsScreen() {
   const params = useLocalSearchParams();
-  
+
   // Check if this is a job post by looking for job-specific fields
-  const isJobPost = 'position' in params && !('name' in params);
+  const isJobPost = "position" in params && !("name" in params);
 
   if (isJobPost) {
     // Job Post View
@@ -127,10 +127,10 @@ export default function JobDetailsScreen() {
         style={styles.image}
         resizeMode="contain"
       />
-      
+
       <View style={styles.content}>
         <Text style={styles.title}>{name}</Text>
-        
+
         {/* Main Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Main Information</Text>
@@ -179,7 +179,9 @@ export default function JobDetailsScreen() {
           <Text style={styles.sectionTitle}>Work Details</Text>
           <View style={styles.infoContainer}>
             <Text style={styles.label}>🗓️ Start Date:</Text>
-            <Text style={styles.value}>{new Date(startDate as string).toLocaleDateString()}</Text>
+            <Text style={styles.value}>
+              {new Date(startDate as string).toLocaleDateString()}
+            </Text>
           </View>
 
           <View style={styles.infoContainer}>
@@ -225,12 +227,12 @@ export default function JobDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    backgroundColor: '#F8F8F8',
+    backgroundColor: "#F8F8F8",
   },
   content: {
     padding: 20,
@@ -238,17 +240,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 16,
-    color: '#4A2D8B',
-    textAlign: 'center',
+    color: "#4A2D8B",
+    textAlign: "center",
   },
   section: {
-    backgroundColor: '#F8F8F8',
+    backgroundColor: "#F8F8F8",
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#4A2D8B',
+    shadowColor: "#4A2D8B",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -256,36 +258,36 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
-    color: '#4A2D8B',
+    color: "#4A2D8B",
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: "#E0E0E0",
     paddingBottom: 8,
   },
   infoContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 12,
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    flexWrap: "wrap",
+    alignItems: "center",
   },
   label: {
-    fontWeight: '500',
+    fontWeight: "500",
     width: 130,
     fontSize: 15,
-    color: '#333',
+    color: "#333",
   },
   value: {
     flex: 1,
     fontSize: 15,
-    color: '#666',
+    color: "#666",
   },
   description: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#666',
-    backgroundColor: '#fff',
+    color: "#666",
+    backgroundColor: "#fff",
     padding: 12,
     borderRadius: 8,
   },
-}); 
+});
