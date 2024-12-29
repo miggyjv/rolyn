@@ -45,6 +45,8 @@ interface ProfileFormData {
   skills: Tag[];
   image: string | null;
   jobType: string;
+  gender: string;
+  nationality: string;
 }
 
 interface Tag {
@@ -115,6 +117,8 @@ const jobTypeOptions = [
   "Freelance",
   "Other",
 ];
+
+const genderOptions = ["Male", "Female", "Other"];
 
 const styles = StyleSheet.create({
   container: {
@@ -385,6 +389,8 @@ export default function ProfileScreen() {
     skills: [],
     image: null,
     jobType: "",
+    gender: "",
+    nationality: "",
   });
   const [showPositionModal, setShowPositionModal] = useState(false);
   const [showEducationModal, setShowEducationModal] = useState(false);
@@ -395,6 +401,7 @@ export default function ProfileScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showJobTypeModal, setShowJobTypeModal] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -461,6 +468,8 @@ export default function ProfileScreen() {
               languageInput: "",
               skillInput: "",
               jobType: professional.job_type || "",
+              gender: professional.gender || "",
+              nationality: professional.nationality || "",
             });
           }
         }
@@ -537,6 +546,8 @@ export default function ProfileScreen() {
           languages: formData.languages.map((lang) => lang.label),
           skills: formData.skills.map((skill) => skill.label),
           image: formData.image,
+          gender: formData.gender,
+          nationality: formData.nationality,
         };
 
         const { error } = await supabase
@@ -828,6 +839,34 @@ export default function ProfileScreen() {
             }
             placeholder="Enter number of kids"
             keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Gender</Text>
+          <TouchableOpacity
+            style={styles.textInput}
+            onPress={() => setShowGenderModal(true)}
+          >
+            <Text
+              style={
+                formData.gender ? styles.optionText : styles.placeholderText
+              }
+            >
+              {formData.gender || "Select gender"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Nationality</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.nationality}
+            onChangeText={(text) =>
+              setFormData((prev) => ({ ...prev, nationality: text }))
+            }
+            placeholder="Enter your nationality"
           />
         </View>
 
@@ -1139,6 +1178,17 @@ export default function ProfileScreen() {
           selectedValue={formData.jobType}
           onSelect={(value) =>
             setFormData((prev) => ({ ...prev, jobType: value }))
+          }
+        />
+
+        <SelectionModal
+          visible={showGenderModal}
+          onClose={() => setShowGenderModal(false)}
+          title="Select Gender"
+          options={genderOptions}
+          selectedValue={formData.gender}
+          onSelect={(value) =>
+            setFormData((prev) => ({ ...prev, gender: value }))
           }
         />
       </ScrollView>

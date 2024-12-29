@@ -14,55 +14,82 @@ const width = Dimensions.get("window").width;
 
 interface WorkerProfile {
   id: number;
-  image: string;
   name: string;
-  position: string;
-  languages: string[];
-  skills: string[];
-  start_date: string | Date;
-  work_experience: string;
-  personal_description: string;
-  phone_number: string;
   age: number;
-  education_level: string;
-  job_type: string;
+  number_of_kids: number;
+  position: string;
+  work_experience: string;
   curr_status: string;
+  start_date: string;
   expected_salary: string;
   accommodation_pref: string;
+  working_country: string;
+  personal_description: string;
+  languages: string[];
+  skills: string[];
+  image: string;
+  job_type: string;
+  religion: string;
+  marital_status: string;
+  education_level: string;
   location: string;
+  nationality: string;
+  gender: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface JobPost {
   id: string;
   employer_id: string;
   position: string;
-  job_type: 'Live-in' | 'Live-out' | 'Part-time';
+  job_type: string;
   required_languages: string[];
-  required_skills?: string[];
+  required_skills: string[];
   location: string;
   salary_range: string;
   accommodation_provided: boolean;
-  accommodation_type?: string;
-  start_date?: string;
-  description?: string;
-  household_size?: number;
+  accommodation_type: string;
+  accommodation_details: string;
+  start_date: string;
+  description: string;
+  status: string;
+  household_size: number;
   has_children: boolean;
+  number_of_children: number;
+  children_ages: string[];
   has_elderly: boolean;
   has_pets: boolean;
+  pets_details: string;
+  experience_years: number;
+  benefits: string[];
+  duties: string[];
+  education_requirement: string;
+  work_schedule: string;
+  day_off: string;
+  created_at: string;
+  updated_at: string;
+  preferred_start_time: string;
+  employer_references: string[];
 }
 
 interface RecCardsProps {
   cardData: (WorkerProfile | JobPost)[];
   title: string;
   vertical?: boolean;
-  cardType: 'worker' | 'job';
+  cardType: "worker" | "job";
 }
 
-export default function RecCards({ cardData, title, vertical = false, cardType }: RecCardsProps) {
+export default function RecCards({
+  cardData,
+  title,
+  vertical = false,
+  cardType,
+}: RecCardsProps) {
   const router = useRouter();
 
   const isJobPost = (item: WorkerProfile | JobPost): item is JobPost => {
-    return 'employer_id' in item;
+    return "employer_id" in item;
   };
 
   const formatArray = (arrayString: string | string[]) => {
@@ -84,13 +111,21 @@ export default function RecCards({ cardData, title, vertical = false, cardType }
           position: job.position,
           jobType: job.job_type,
           languages: formatArray(job.required_languages),
-          skills: job.required_skills ? formatArray(job.required_skills) : '',
+          skills: job.required_skills ? formatArray(job.required_skills) : "",
           location: job.location,
           salaryRange: job.salary_range,
-          accommodation: `${job.accommodation_provided ? 'Provided' : 'Not provided'}${job.accommodation_type ? ` (${job.accommodation_type})` : ''}`,
-          startDate: job.start_date || 'Flexible',
-          description: job.description || '',
-          householdDetails: `${job.household_size || ''} person(s)${job.has_children ? ', with children' : ''}${job.has_elderly ? ', with elderly' : ''}${job.has_pets ? ', with pets' : ''}`,
+          accommodation: `${
+            job.accommodation_provided ? "Provided" : "Not provided"
+          }${job.accommodation_type ? ` (${job.accommodation_type})` : ""}`,
+          startDate: job.start_date || "Flexible",
+          description: job.description || "",
+          householdDetails: `${job.household_size || ""} person(s)${
+            job.has_children ? ", with children" : ""
+          }${job.has_elderly ? ", with elderly" : ""}${
+            job.has_pets ? ", with pets" : ""
+          }`,
+          preferredStartTime: job.preferred_start_time,
+          employerReferences: job.employer_references,
         },
       });
     };
@@ -117,13 +152,31 @@ export default function RecCards({ cardData, title, vertical = false, cardType }
             </Text>
           )}
           <View style={styles.cardFooter}>
-            <Text style={styles.cardSalary}>
-              💰 Salary: {job.salary_range}
-            </Text>
+            <Text style={styles.cardSalary}>💰 Salary: {job.salary_range}</Text>
             <Text style={styles.cardAccommodation}>
-              🏠 {job.accommodation_provided ? 'Accommodation provided' : 'No accommodation'}
+              🏠{" "}
+              {job.accommodation_provided
+                ? "Accommodation provided"
+                : "No accommodation"}
             </Text>
           </View>
+          {cardType === "job" && (
+            <>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>🕒 Start Time:</Text>
+                <Text style={styles.detailText}>
+                  {job.preferred_start_time}
+                </Text>
+              </View>
+              {job.employer_references &&
+                job.employer_references.length > 0 && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>📝 References:</Text>
+                    <Text style={styles.detailText}>Available</Text>
+                  </View>
+                )}
+            </>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -137,20 +190,27 @@ export default function RecCards({ cardData, title, vertical = false, cardType }
           id: worker.id,
           name: worker.name,
           image: worker.image,
-          positionNeeded: worker.position,
+          position: worker.position,
           languages: formatArray(worker.languages),
           skills: formatArray(worker.skills),
-          startDate: typeof worker.start_date === 'string' ? worker.start_date : worker.start_date.toISOString(),
-          workExperience: worker.work_experience,
-          personalDescription: worker.personal_description,
-          phoneNumber: worker.phone_number,
+          start_date: worker.start_date,
+          work_experience: worker.work_experience,
+          personal_description: worker.personal_description,
           age: worker.age,
-          educationLevel: worker.education_level,
-          jobType: worker.job_type,
-          currStatus: worker.curr_status,
-          expectedSalary: worker.expected_salary,
-          accommodationPref: worker.accommodation_pref,
+          number_of_kids: worker.number_of_kids,
+          education_level: worker.education_level,
+          job_type: worker.job_type,
+          curr_status: worker.curr_status,
+          expected_salary: worker.expected_salary,
+          accommodation_pref: worker.accommodation_pref,
+          working_country: worker.working_country,
           location: worker.location,
+          nationality: worker.nationality,
+          gender: worker.gender,
+          religion: worker.religion,
+          marital_status: worker.marital_status,
+          created_at: worker.created_at,
+          updated_at: worker.updated_at,
         },
       });
     };
@@ -177,8 +237,9 @@ export default function RecCards({ cardData, title, vertical = false, cardType }
           </Text>
           <View style={styles.cardFooter}>
             <Text style={styles.cardStartDate}>
-              🗓️ Available from: {typeof worker.start_date === 'string' 
-                ? new Date(worker.start_date).toLocaleDateString() 
+              🗓️ Available from:{" "}
+              {typeof worker.start_date === "string"
+                ? new Date(worker.start_date).toLocaleDateString()
                 : worker.start_date.toLocaleDateString()}
             </Text>
             <Text style={styles.cardExperience}>
@@ -195,15 +256,15 @@ export default function RecCards({ cardData, title, vertical = false, cardType }
       {title && <Text style={styles.sectionTitle}>{title}</Text>}
       {vertical ? (
         <View>
-          {cardData.map((item) => (
+          {cardData.map((item) =>
             isJobPost(item) ? renderJobCard(item) : renderWorkerCard(item)
-          ))}
+          )}
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {cardData.map((item) => (
+          {cardData.map((item) =>
             isJobPost(item) ? renderJobCard(item) : renderWorkerCard(item)
-          ))}
+          )}
         </ScrollView>
       )}
     </View>
@@ -264,10 +325,10 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#666",
     marginBottom: 12,
-    fontStyle: 'italic',
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontStyle: "italic",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardSkills: {
     fontSize: 14,
@@ -276,7 +337,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4A2D8B10",
     padding: 8,
     borderRadius: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   cardFooter: {
     marginTop: 8,
@@ -295,7 +356,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   verticalCard: {
-    width: '100%',
+    width: "100%",
     marginBottom: 20,
     marginHorizontal: 0,
   },
@@ -308,5 +369,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     fontWeight: "500",
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginRight: 8,
+    fontWeight: "500",
+  },
+  detailText: {
+    fontSize: 14,
+    color: "#333",
   },
 });

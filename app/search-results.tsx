@@ -32,6 +32,8 @@ interface Professional {
   expected_salary: string;
   accommodation_pref: string;
   location: string;
+  gender: string;
+  nationality: string;
 }
 
 interface JobPost {
@@ -51,6 +53,8 @@ interface JobPost {
   has_children: boolean;
   has_elderly: boolean;
   has_pets: boolean;
+  employer_references?: string[];
+  preferred_start_time?: string;
 }
 
 export default function SearchResults() {
@@ -135,6 +139,8 @@ export default function SearchResults() {
                work_schedule.ilike.%${term}%,
                day_off.ilike.%${term}%,
                salary_range.ilike.%${term}%,
+               preferred_start_time.ilike.%${term}%,
+               employer_references.cs.{${term}},
                benefits.cs.{${term}},
                duties.cs.{${term}},
                children_ages.cs.{${term}},
@@ -171,6 +177,10 @@ export default function SearchResults() {
                 job.work_schedule?.toLowerCase().includes(termLower) ||
                 job.day_off?.toLowerCase().includes(termLower) ||
                 job.salary_range?.toLowerCase().includes(termLower) ||
+                job.preferred_start_time?.toLowerCase().includes(termLower) ||
+                job.employer_references?.some((ref) =>
+                  ref.toLowerCase().includes(termLower)
+                ) ||
                 job.benefits?.some((benefit) =>
                   benefit.toLowerCase().includes(termLower)
                 ) ||
@@ -215,6 +225,8 @@ export default function SearchResults() {
                job_type.ilike.%${term}%,
                religion.ilike.%${term}%,
                marital_status.ilike.%${term}%,
+               gender.ilike.%${term}%,
+               nationality.ilike.%${term}%,
                languages.cs.{${term}},
                skills.cs.{${term}}`
             );
@@ -260,6 +272,8 @@ export default function SearchResults() {
                 professional.marital_status
                   ?.toLowerCase()
                   .includes(termLower) ||
+                professional.gender?.toLowerCase().includes(termLower) ||
+                professional.nationality?.toLowerCase().includes(termLower) ||
                 professional.languages?.some((lang) =>
                   lang.toLowerCase().includes(termLower)
                 ) ||
