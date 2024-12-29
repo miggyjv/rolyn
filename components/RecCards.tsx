@@ -108,26 +108,51 @@ export default function RecCards({
         pathname: "/job-details",
         params: {
           id: job.id,
+          employer_id: job.employer_id,
           position: job.position,
-          jobType: job.job_type,
-          languages: formatArray(job.required_languages),
-          skills: job.required_skills ? formatArray(job.required_skills) : "",
+          job_type: job.job_type,
+          required_languages: formatArray(job.required_languages),
+          required_skills: job.required_skills
+            ? formatArray(job.required_skills)
+            : "",
           location: job.location,
-          salaryRange: job.salary_range,
-          accommodation: `${
-            job.accommodation_provided ? "Provided" : "Not provided"
-          }${job.accommodation_type ? ` (${job.accommodation_type})` : ""}`,
-          startDate: job.start_date || "Flexible",
-          description: job.description || "",
-          householdDetails: `${job.household_size || ""} person(s)${
-            job.has_children ? ", with children" : ""
-          }${job.has_elderly ? ", with elderly" : ""}${
-            job.has_pets ? ", with pets" : ""
-          }`,
-          preferredStartTime: job.preferred_start_time,
-          employerReferences: job.employer_references,
+          salary_range: job.salary_range,
+          accommodation_provided: job.accommodation_provided,
+          accommodation_type: job.accommodation_type,
+          accommodation_details: job.accommodation_details,
+          start_date: job.start_date,
+          description: job.description,
+          status: job.status,
+          household_size: job.household_size,
+          has_children: job.has_children,
+          number_of_children: job.number_of_children,
+          children_ages: job.children_ages
+            ? formatArray(job.children_ages)
+            : "",
+          has_elderly: job.has_elderly,
+          has_pets: job.has_pets,
+          pets_details: job.pets_details,
+          experience_years: job.experience_years,
+          benefits: job.benefits ? formatArray(job.benefits) : "",
+          duties: job.duties ? formatArray(job.duties) : "",
+          education_requirement: job.education_requirement,
+          work_schedule: job.work_schedule,
+          day_off: job.day_off,
+          created_at: job.created_at,
+          updated_at: job.updated_at,
+          preferred_start_time: job.preferred_start_time,
+          employer_references: job.employer_references
+            ? formatArray(job.employer_references)
+            : "",
         },
       });
+    };
+
+    // Helper function to handle arrays or strings
+    const formatToArray = (value: string | string[] | undefined): string[] => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value;
+      return value.split(",").map((item) => item.trim());
     };
 
     return (
@@ -137,46 +162,90 @@ export default function RecCards({
         onPress={handlePress}
       >
         <View style={styles.cardContent}>
+          {/* Status Badge */}
+          {job.status && (
+            <View
+              style={[
+                styles.statusTag,
+                {
+                  backgroundColor:
+                    job.status === "active" ? "#4CAF50" : "#FFA000",
+                },
+              ]}
+            >
+              <Text style={styles.statusTagText}>{job.status}</Text>
+            </View>
+          )}
+
+          {/* Main Info */}
           <Text style={styles.cardTitle}>{job.position}</Text>
-          <Text style={styles.cardPosition}>{job.job_type}</Text>
-          <Text style={styles.cardLocation}>
-            <Text>📍 </Text>
-            <Text>{job.location}</Text>
-          </Text>
-          <Text style={styles.cardSkills}>
-            🗣️ Languages: {formatArray(job.required_languages)}
-          </Text>
-          {job.required_skills && (
-            <Text style={styles.cardSkills}>
-              ⭐ Skills: {formatArray(job.required_skills)}
-            </Text>
-          )}
-          <View style={styles.cardFooter}>
-            <Text style={styles.cardSalary}>💰 Salary: {job.salary_range}</Text>
-            <Text style={styles.cardAccommodation}>
-              🏠{" "}
-              {job.accommodation_provided
-                ? "Accommodation provided"
-                : "No accommodation"}
-            </Text>
+          <View style={styles.mainInfo}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoIcon}>💼</Text>
+              <Text style={styles.infoText}>{job.job_type}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoIcon}>📍</Text>
+              <Text style={styles.infoText}>{job.location}</Text>
+            </View>
           </View>
-          {cardType === "job" && (
-            <>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>🕒 Start Time:</Text>
-                <Text style={styles.detailText}>
-                  {job.preferred_start_time}
+
+          {/* Requirements */}
+          <View style={styles.requirementsContainer}>
+            <Text style={styles.sectionLabel}>Required Languages</Text>
+            <View style={styles.badgeContainer}>
+              {formatToArray(job.required_languages).map((lang, index) => (
+                <View key={index} style={styles.smallBadge}>
+                  <Text style={styles.smallBadgeText}>{lang}</Text>
+                </View>
+              ))}
+            </View>
+
+            {job.required_skills && (
+              <>
+                <Text style={[styles.sectionLabel, { marginTop: 12 }]}>
+                  Required Skills
                 </Text>
-              </View>
-              {job.employer_references &&
-                job.employer_references.length > 0 && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>📝 References:</Text>
-                    <Text style={styles.detailText}>Available</Text>
-                  </View>
-                )}
-            </>
-          )}
+                <View style={styles.badgeContainer}>
+                  {formatToArray(job.required_skills).map((skill, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.smallBadge,
+                        { backgroundColor: "#E8F5E9" },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.smallBadgeText, { color: "#2E7D32" }]}
+                      >
+                        {skill}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Footer Info */}
+          <View style={styles.cardFooter}>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>💰 Salary</Text>
+              <Text style={styles.footerValue}>{job.salary_range}</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>🏠 Accommodation</Text>
+              <Text style={styles.footerValue}>
+                {job.accommodation_provided ? "Provided" : "Not provided"}
+              </Text>
+            </View>
+            <View style={styles.footerItem}>
+              <Text style={styles.footerLabel}>⏰ Start</Text>
+              <Text style={styles.footerValue}>
+                {job.preferred_start_time || "Flexible"}
+              </Text>
+            </View>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -384,5 +453,84 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
     color: "#333",
+  },
+  statusTag: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusTagText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  mainInfo: {
+    flexDirection: "row",
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  infoItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  infoIcon: {
+    marginRight: 4,
+    fontSize: 14,
+  },
+  infoText: {
+    color: "#666",
+    fontSize: 14,
+  },
+  requirementsContainer: {
+    marginBottom: 12,
+  },
+  badgeContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  smallBadge: {
+    backgroundColor: "#EDE7F6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  smallBadgeText: {
+    color: "#4A2D8B",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    paddingTop: 12,
+    marginTop: 4,
+  },
+  footerItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  footerLabel: {
+    color: "#666",
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  footerValue: {
+    color: "#333",
+    fontSize: 13,
+    fontWeight: "400",
+  },
+  sectionLabel: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+    marginBottom: 8,
   },
 });
