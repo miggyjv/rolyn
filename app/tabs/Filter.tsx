@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,74 +10,143 @@ import {
   TextInput,
 } from "react-native";
 import { useRouter } from "expo-router";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function Filter() {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [currentFilter, setCurrentFilter] = useState("");
-
-  // State for filter values
-  const [selectedPosition, setSelectedPosition] = useState("");
-  const [selectedJobType, setSelectedJobType] = useState("");
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedPayRange, setSelectedPayRange] = useState({
-    min: "",
-    max: "",
-  });
-  const [selectedExperience, setSelectedExperience] = useState("");
+  const [userRole, setUserRole] = useState<"employer" | "worker" | null>(null);
   const [skillInput, setSkillInput] = useState("");
 
+  // Fetch user role on component mount
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profileError) throw profileError;
+        setUserRole(profileData.role);
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    }
+
+    fetchUserRole();
+  }, []);
+
+  // Employer filters (searching for workers)
+  const [selectedPosition, setSelectedPosition] = useState("");
+  const [selectedNationality, setSelectedNationality] = useState("");
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedExperience, setSelectedExperience] = useState("");
+  const [selectedAge, setSelectedAge] = useState({ min: "", max: "" });
+  const [selectedSalary, setSelectedSalary] = useState({ min: "", max: "" });
+
+  // Worker filters (searching for jobs)
+  const [selectedJobType, setSelectedJobType] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedAccommodation, setSelectedAccommodation] = useState("");
+  const [selectedHouseholdSize, setSelectedHouseholdSize] = useState("");
+
   const positions = [
-    "Chef",
-    "Cleaner",
-    "Driver",
-    "Gardener",
+    "Domestic Helper",
     "Nanny",
-    "Security Guard",
-    "Tutor",
-    "Maid",
+    "Driver",
     "Cook",
-    "Chauffeur",
+    "Gardener",
+    "Elderly Caregiver",
     "Housekeeper",
-    "Caregiver",
-    "Butler",
+    "All-Around Helper",
+    "Tutor",
+    "Pet Caregiver",
   ];
 
-  const jobTypes = [
-    "Full-time",
-    "Part-time",
-    "Contract",
-    "Temporary",
-    "On-call",
+  const nationalities = [
+    "Filipino",
+    "Indonesian",
+    "Malaysian",
+    "Indian",
+    "Bangladeshi",
+    "Sri Lankan",
+    "Myanmar",
+    "Thai",
   ];
 
   const languages = [
     "English",
     "Mandarin",
-    "Malay",
-    "Tamil",
-    "Hindi",
+    "Cantonese",
     "Filipino",
-    "Thai",
     "Indonesian",
+    "Hindi",
+    "Thai",
+    "Malay",
   ];
 
-  const experienceLevels = [
-    "Entry Level (0-1 years)",
-    "Junior (1-3 years)",
-    "Mid-Level (3-5 years)",
-    "Senior (5-10 years)",
-    "Expert (10+ years)",
+  const jobTypes = ["Live-in", "Live-out", "Part-time"];
+
+  const locations = [
+    "Hong Kong Island",
+    "Kowloon",
+    "New Territories",
+    "Lantau Island",
   ];
 
-  const filterOptions = [
-    { id: 1, title: "Position", value: selectedPosition },
-    { id: 2, title: "Job Type", value: selectedJobType },
-    { id: 3, title: "Languages", value: selectedLanguages.join(", ") },
-    { id: 4, title: "Skills Required", value: selectedSkills.join(", ") },
-  ];
+  // Define filter options based on user role
+  const getFilterOptions = () => {
+    if (userRole === "employer") {
+      return [
+        { id: 1, title: "Position", value: selectedPosition },
+        { id: 2, title: "Nationality", value: selectedNationality },
+        { id: 3, title: "Languages", value: selectedLanguages.join(", ") },
+        { id: 4, title: "Skills", value: selectedSkills.join(", ") },
+        { id: 5, title: "Experience", value: selectedExperience },
+        {
+          id: 6,
+          title: "Age Range",
+          value:
+            selectedAge.min && selectedAge.max
+              ? `${selectedAge.min}-${selectedAge.max}`
+              : "",
+        },
+        {
+          id: 7,
+          title: "Expected Salary",
+          value:
+            selectedSalary.min && selectedSalary.max
+              ? `${selectedSalary.min}-${selectedSalary.max}`
+              : "",
+        },
+      ];
+    } else {
+      return [
+        { id: 1, title: "Position", value: selectedPosition },
+        { id: 2, title: "Job Type", value: selectedJobType },
+        { id: 3, title: "Location", value: selectedLocation },
+        { id: 4, title: "Accommodation", value: selectedAccommodation },
+        {
+          id: 5,
+          title: "Salary Range",
+          value:
+            selectedSalary.min && selectedSalary.max
+              ? `${selectedSalary.min}-${selectedSalary.max}`
+              : "",
+        },
+        { id: 6, title: "Household Size", value: selectedHouseholdSize },
+      ];
+    }
+  };
 
   const handleFilterPress = (filterTitle: string) => {
     setCurrentFilter(filterTitle);
@@ -136,6 +205,31 @@ export default function Filter() {
           </ScrollView>
         );
 
+      case "Location":
+        return (
+          <ScrollView>
+            {locations.map((loc) => (
+              <TouchableOpacity
+                key={loc}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedLocation(loc);
+                  setShowModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    selectedLocation === loc && styles.selectedOption,
+                  ]}
+                >
+                  {loc}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        );
+
       case "Languages":
         return (
           <ScrollView>
@@ -170,6 +264,7 @@ export default function Filter() {
           </ScrollView>
         );
 
+      case "Skills":
       case "Skills Required":
         return (
           <View style={styles.modalInputContainer}>
@@ -197,24 +292,49 @@ export default function Filter() {
           </View>
         );
 
-      case "Pay Range":
+      case "Experience":
+        return (
+          <ScrollView>
+            {["1+", "2+", "3+", "5+", "10+"].map((exp) => (
+              <TouchableOpacity
+                key={exp}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedExperience(exp);
+                  setShowModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    selectedExperience === exp && styles.selectedOption,
+                  ]}
+                >
+                  {exp} years
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        );
+
+      case "Age Range":
         return (
           <View style={styles.modalInputContainer}>
             <TextInput
               style={styles.modalInput}
-              placeholder="Minimum salary"
-              value={selectedPayRange.min}
+              placeholder="Minimum age"
+              value={selectedAge.min}
               onChangeText={(text) =>
-                setSelectedPayRange((prev) => ({ ...prev, min: text }))
+                setSelectedAge((prev) => ({ ...prev, min: text }))
               }
               keyboardType="numeric"
             />
             <TextInput
               style={styles.modalInput}
-              placeholder="Maximum salary"
-              value={selectedPayRange.max}
+              placeholder="Maximum age"
+              value={selectedAge.max}
               onChangeText={(text) =>
-                setSelectedPayRange((prev) => ({ ...prev, max: text }))
+                setSelectedAge((prev) => ({ ...prev, max: text }))
               }
               keyboardType="numeric"
             />
@@ -227,25 +347,81 @@ export default function Filter() {
           </View>
         );
 
-      case "Experience Level":
+      case "Salary Range":
+      case "Expected Salary":
+        return (
+          <View style={styles.modalInputContainer}>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Minimum salary"
+              value={selectedSalary.min}
+              onChangeText={(text) =>
+                setSelectedSalary((prev) => ({ ...prev, min: text }))
+              }
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Maximum salary"
+              value={selectedSalary.max}
+              onChangeText={(text) =>
+                setSelectedSalary((prev) => ({ ...prev, max: text }))
+              }
+              keyboardType="numeric"
+            />
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={() => setShowModal(false)}
+            >
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        );
+
+      case "Accommodation":
         return (
           <ScrollView>
-            {experienceLevels.map((level) => (
+            {["Provided", "Not Provided"].map((option) => (
               <TouchableOpacity
-                key={level}
+                key={option}
                 style={styles.modalOption}
                 onPress={() => {
-                  setSelectedExperience(level);
+                  setSelectedAccommodation(option);
                   setShowModal(false);
                 }}
               >
                 <Text
                   style={[
                     styles.modalOptionText,
-                    selectedExperience === level && styles.selectedOption,
+                    selectedAccommodation === option && styles.selectedOption,
                   ]}
                 >
-                  {level}
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        );
+
+      case "Household Size":
+        return (
+          <ScrollView>
+            {["1-2", "3-4", "5-6", "7+"].map((size) => (
+              <TouchableOpacity
+                key={size}
+                style={styles.modalOption}
+                onPress={() => {
+                  setSelectedHouseholdSize(size);
+                  setShowModal(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    selectedHouseholdSize === size && styles.selectedOption,
+                  ]}
+                >
+                  {size} persons
                 </Text>
               </TouchableOpacity>
             ))}
@@ -258,37 +434,222 @@ export default function Filter() {
   };
 
   const resetFilters = () => {
-    setSelectedPosition("");
-    setSelectedJobType("");
-    setSelectedLanguages([]);
-    setSelectedSkills([]);
-    setSelectedPayRange({ min: "", max: "" });
-    setSelectedExperience("");
-    setSkillInput("");
+    if (userRole === "employer") {
+      setSelectedPosition("");
+      setSelectedNationality("");
+      setSelectedLanguages([]);
+      setSelectedSkills([]);
+      setSelectedExperience("");
+      setSelectedAge({ min: "", max: "" });
+      setSelectedSalary({ min: "", max: "" });
+    } else {
+      setSelectedPosition("");
+      setSelectedJobType("");
+      setSelectedLocation("");
+      setSelectedAccommodation("");
+      setSelectedSalary({ min: "", max: "" });
+      setSelectedHouseholdSize("");
+    }
   };
 
   const applyFilters = () => {
-    // Combine all filters into a single spaced string
-    const filtersArray = [
-      selectedPosition,
-      selectedJobType,
-      ...selectedLanguages,
-      ...selectedSkills,
-      selectedPayRange.min && selectedPayRange.max
-        ? `${selectedPayRange.min}-${selectedPayRange.max}`
-        : "",
-      selectedExperience,
-    ].filter(Boolean); // remove empty strings
+    const filters =
+      userRole === "employer"
+        ? {
+            position: selectedPosition,
+            nationality: selectedNationality,
+            languages: selectedLanguages,
+            skills: selectedSkills,
+            experience: selectedExperience,
+            age_range: selectedAge,
+            salary_range: selectedSalary,
+          }
+        : {
+            position: selectedPosition,
+            job_type: selectedJobType,
+            location: selectedLocation,
+            accommodation: selectedAccommodation,
+            salary_range: selectedSalary,
+            household_size: selectedHouseholdSize,
+          };
 
-    const searchQuery = filtersArray.join(" ");
-
-    // Navigate to search-results with the combined query
     router.push({
       pathname: "/search-results",
-      params: { searchQuery },
+      params: {
+        filters: JSON.stringify(filters),
+        userRole,
+      },
     });
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#fff",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 20,
+      backgroundColor: "#fff",
+      borderBottomWidth: 1,
+      borderBottomColor: "#F0F0F0",
+      shadowColor: "#4A2D8B",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3,
+      elevation: 2,
+    },
+    backButton: {
+      fontSize: 24,
+      marginRight: 16,
+      color: "#4A2D8B",
+      fontWeight: "600",
+    },
+    headerTitle: {
+      fontSize: 22,
+      fontWeight: "600",
+      color: "#4A2D8B",
+    },
+    mainContainer: {
+      flex: 1,
+      display: "flex",
+      justifyContent: "space-between",
+      paddingBottom: 20,
+    },
+    filterList: {
+      flex: 1,
+      paddingTop: 10,
+    },
+    filterItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      marginHorizontal: 12,
+      marginVertical: 6,
+      backgroundColor: "#F8F8F8",
+      borderRadius: 12,
+      shadowColor: "#4A2D8B",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    filterItemContent: {
+      flex: 1,
+    },
+    filterText: {
+      fontSize: 16,
+      marginBottom: 4,
+      color: "#4A2D8B",
+      fontWeight: "500",
+    },
+    selectedValue: {
+      fontSize: 14,
+      color: "#666",
+      marginTop: 2,
+    },
+    chevron: {
+      fontSize: 20,
+      color: "#4A2D8B",
+      marginLeft: 8,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(74, 45, 139, 0.3)",
+      justifyContent: "flex-end",
+    },
+    modalContent: {
+      backgroundColor: "#fff",
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      padding: 20,
+      maxHeight: "70%",
+      shadowColor: "#4A2D8B",
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 5,
+      elevation: 5,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      marginBottom: 16,
+      textAlign: "center",
+      color: "#4A2D8B",
+      borderBottomWidth: 1,
+      borderBottomColor: "#F0F0F0",
+      paddingBottom: 16,
+    },
+    modalOption: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F0F0F0",
+    },
+    modalOptionText: {
+      fontSize: 16,
+      color: "#333",
+    },
+    selectedOption: {
+      color: "#4A2D8B",
+      fontWeight: "600",
+    },
+    modalInputContainer: {
+      padding: 16,
+    },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: "#E0E0E0",
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 12,
+      fontSize: 16,
+      backgroundColor: "#F8F8F8",
+    },
+    resetButton: {
+      backgroundColor: "#fff",
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginHorizontal: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: "#4A2D8B",
+    },
+    resetButtonText: {
+      color: "#4A2D8B",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    applyButton: {
+      backgroundColor: "#4A2D8B",
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginHorizontal: 16,
+      marginTop: 8,
+    },
+    applyButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    doneButton: {
+      backgroundColor: "#4A2D8B",
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      marginTop: 16,
+    },
+    doneButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+  });
+
+  // Rest of your component remains the same...
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -300,13 +661,11 @@ export default function Filter() {
 
       <View style={styles.mainContainer}>
         <View style={styles.filterList}>
-          {filterOptions.map((option) => (
+          {getFilterOptions().map((option) => (
             <TouchableOpacity
               key={option.id}
               style={styles.filterItem}
-              onPress={() => {
-                handleFilterPress(option.title);
-              }}
+              onPress={() => handleFilterPress(option.title)}
             >
               <View style={styles.filterItemContent}>
                 <Text style={styles.filterText}>{option.title}</Text>
@@ -324,14 +683,8 @@ export default function Filter() {
             <Text style={styles.resetButtonText}>Reset Filters</Text>
           </TouchableOpacity>
 
-          {/* APPLY FILTERS BUTTON */}
-          <TouchableOpacity
-            style={styles.applyButton}
-            onPress={applyFilters}
-          >
-            <Text style={styles.applyButtonText}>
-              Apply Filters
-            </Text>
+          <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -356,190 +709,3 @@ export default function Filter() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    shadowColor: "#4A2D8B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  backButton: {
-    fontSize: 24,
-    marginRight: 16,
-    color: "#4A2D8B",
-    fontWeight: "600",
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#4A2D8B",
-  },
-  filterList: {
-    flex: 1,
-    paddingTop: 10,
-  },
-  filterItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    backgroundColor: "#F8F8F8",
-    borderRadius: 12,
-    shadowColor: "#4A2D8B",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  filterItemContent: {
-    flex: 1,
-  },
-  filterText: {
-    fontSize: 16,
-    marginBottom: 4,
-    color: "#4A2D8B",
-    fontWeight: "500",
-  },
-  selectedValue: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 2,
-  },
-  chevron: {
-    fontSize: 20,
-    color: "#4A2D8B",
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(74, 45, 139, 0.3)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: "70%",
-    shadowColor: "#4A2D8B",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 16,
-    textAlign: "center",
-    color: "#4A2D8B",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-    paddingBottom: 16,
-  },
-  modalOption: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  selectedOption: {
-    color: "#4A2D8B",
-    fontWeight: "600",
-  },
-  modalInputContainer: {
-    padding: 16,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: "#F8F8F8",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  doneButton: {
-    backgroundColor: "#4A2D8B",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  doneButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  mainContainer: {
-    flex: 1,
-    display: "flex",
-    justifyContent: "space-between",
-    paddingBottom: 20,
-  },
-  resetButton: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#4A2D8B",
-    shadowColor: "#4A2D8B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  resetButtonText: {
-    color: "#4A2D8B",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  applyButton: {
-    backgroundColor: "#4A2D8B",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  applyButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

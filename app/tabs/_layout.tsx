@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Platform, View, Text } from "react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { MaterialIcons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
@@ -134,6 +135,15 @@ export default function TabLayout() {
                 color="purple"
               />
             </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="message" size={24} color={color} />
           ),
         }}
       />
