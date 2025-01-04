@@ -76,14 +76,8 @@ export default function MessagesScreen() {
       <Text style={styles.emptyStateTitle}>No Messages Yet</Text>
       <Text style={styles.emptyStateText}>
         Your conversations will appear here once you start chatting with
-        employers or workers.
+        employers or workers through job postings.
       </Text>
-      <Pressable
-        style={styles.newChatButton}
-        onPress={() => router.push("/search-results")}
-      >
-        <Text style={styles.newChatButtonText}>Find People to Chat With</Text>
-      </Pressable>
     </View>
   );
 
@@ -177,18 +171,6 @@ const styles = StyleSheet.create({
     color: "#718096",
     textAlign: "center",
     marginTop: 8,
-    marginBottom: 24,
-  },
-  newChatButton: {
-    backgroundColor: "#6B46C1",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  newChatButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
   conversationItem: {
     flexDirection: "row",

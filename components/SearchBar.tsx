@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState } from "react";
+import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { FontAwesome } from "@expo/vector-icons";
 
 export default function SearchBar() {
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const router = useRouter();
 
   const handleSearchPress = () => {
@@ -80,4 +80,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-}); 
+});
