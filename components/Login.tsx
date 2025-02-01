@@ -17,7 +17,7 @@ AppState.addEventListener("change", (state) => {
 });
 
 export default function Login() {
-  console.log("Login component mounted");
+  // console.log("Login component mounted");
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
